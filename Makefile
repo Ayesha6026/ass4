@@ -2,7 +2,7 @@ CXX = g++ -std=c++14
 OPTS = -g -O2
 WARN = -Wall -Werror
 DEPS = -MMD -MF $*.d
-INCL =
+INCL = -I /opt/homebrew/opt/boost/include
 
 OBJS = test_graph.o timing.o
 
