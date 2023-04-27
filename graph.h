@@ -8,7 +8,7 @@
 #include <memory>
 #include <unordered_set>
 
-#include <boost/functional/hash.hpp>
+#include "boost/functional/hash.hpp"
 
 
 
@@ -121,22 +121,72 @@ class graph {
 
     ///@todo Define modifiers
     vertex_descriptor insert_vertex(const VertexProperty& vp){ 
-	  return m_max_vd;
-	}
+
+        vertex* v = new vertex(++m_max_vd, vp);
+        m_vertices.insert(v);
+        return m_max_vd;
+    }
+
     edge_descriptor insert_edge(vertex_descriptor sd, vertex_descriptor td,
         const EdgeProperty& ep){
-		return std::make_pair(sd, td);	
-	}
-    void insert_edge_undirected(vertex_descriptor sd, vertex_descriptor td,
+
+        edge* e = new edge(sd, td, ep);
+        m_edges.insert(e);
+        return std::make_pair(sd, td);	
+    }
+      void insert_edge_undirected(vertex_descriptor sd, vertex_descriptor td,
         const EdgeProperty& ep){
-			
-	}
-    void erase_vertex(vertex_descriptor vd){
-		
-	}
-    void erase_edge(edge_descriptor ed){
-		
-	}
+
+          insert_edge(sd, td, ep);
+          insert_edge(td, sd, ep);
+        
+    }
+      void erase_vertex(vertex_descriptor vd){
+          auto v_it = find_vertex(vd);
+          if (v_it == vertices_end()) {
+            return;
+          }
+
+          std::vector<edge*> removeEdges;
+
+          // Remove all edges connected to this vertex.
+          for (auto adjEdge = (*v_it)->m_out_edges.begin();
+              adjEdge != (*v_it)->m_out_edges.end(); ++adjEdge) {
+            edge* e = *adjEdge;
+            vertex* v2 = e->m_source == vd ? e->m_target : e->m_source;
+            v2->m_out_edges.erase(e);
+            removeEdges.push_back(e);
+          }
+
+          // Remove all edges
+          for (auto e : removeEdges) {
+            m_edges.erase(e);
+            delete e;
+          }
+
+          // Remove the vertex
+          m_vertices.erase(*v_it);
+          delete *v_it;
+    }
+      void erase_edge(edge_descriptor ed){
+        auto curEdge = find_edge(ed);
+        if (curEdge == edges_end()) {
+          return;
+        }
+
+        // Remove the edge from the source and target vertex's adjacency list.
+        vertex* sourceVertex = find_vertex(ed.first)->m_out_edges.erase(*curEdge)->m_source;
+        vertex* targVertex = find_vertex(ed.second)->m_out_edges.erase(*curEdge)->m_target;
+
+        // Remove the edge from the edges container.
+        m_edges.erase(*curEdge);
+        delete *curEdge;
+
+        // Remove the edge from the adjacency matrix container.
+        sourceVertex->matrix_cont.erase(targVertex);
+        targVertex->matrix_cont.erase(sourceVertex);
+      }
+    
 	////end of @todo
 	
     void clear() {
@@ -159,6 +209,7 @@ class graph {
 	size_t m_max_vd; //< Maximum vertex descriptor assigned
     MyVertexContainer m_vertices; //<Contains all vertices
     MyEdgeContainer m_edges;    //<Contains all edges
+    MyAdjMatrixContainer matrix_cont 
     // Required internal classes
 
     class vertex {

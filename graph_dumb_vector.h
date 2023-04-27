@@ -97,24 +97,81 @@ template<typename VertexProperty, typename EdgeProperty>
 
       //@todo modifiers
       vertex_descriptor insert_vertex(const VertexProperty& vp) {
+        vertex* v = new vertex(m_max_vd++, vp);
+        m_vertices.push_back(v);
+
         return m_max_vd;
       }
 
       edge_descriptor insert_edge(vertex_descriptor sd, vertex_descriptor td,
           const EdgeProperty& ep) {
+            vertex_iterator source = find_vertex(sd);
+            vertex_iterator target = find_vertex(td);
+            
+            if (source == vertices_end() || target == vertices_end())
+              return {0,0};
+              
+            
+            edge* e = new edge(m_edges.size(), source, target, ep);
+            m_edges.push_back(e);
+            (*source)->m_out_edges.push_back(e);
+            
+            return e->descriptor();
         return {sd,td};
       }
 
       void insert_edge_undirected(vertex_descriptor sd, vertex_descriptor td,
           const EdgeProperty& ep) {
+            vertex_iterator source = find_vertex(sd);
+            vertex_iterator target = find_vertex(td);
+            
+            if (source == vertices_end() || target == vertices_end())
+              return {0,0};
+            
+            edge* e = new edge(m_edges.size(), source, target, ep);
+            m_edges.push_back(e);
+            (*source)->m_out_edges.push_back(e);
+
+            edge* e2 = new edge(m_edges.size(), target, source, ep);
+            m_edges.push_back(e2);
+            (*target)->m_out_edges.push_back(e2);
         
       }
 
       void erase_vertex(vertex_descriptor vd) {
-       
+        vertex_iterator v = find_vertex(vd);
+        
+        if (v == vertices_end())
+          return;
+        
+        // Remove all edges incident to the vertex
+        for (auto iter = (*v)->m_out_edges.begin(); iter != (*v)->m_out_edges.end(); ) {
+          edge* e = *iter;
+          vertex* targ = e->target();
+          if (targ->descriptor() == vd) targ = e->source();
+          adj_edge_storage& out_edges = targ->m_out_edges;
+          out_edges.erase(std::remove(out_edges.begin(), out_edges.end(), e), out_edges.end());
+          m_edges.erase(std::remove(m_edges.begin(), m_edges.end(), e), m_edges.end());
+          delete e;
+        }
+        
+        // Remove the vertex
+        m_vertices.erase(v);
+        delete *v;
       }
 
       void erase_edge(edge_descriptor ed) {
+          edge_iterator e = find_edge(ed);
+          if (e == edges_end())
+            return;
+
+          vertex* source = (*e)->source();
+          adj_edge_storage& out_edges = source->m_out_edges;
+          out_edges.erase(std::remove(out_edges.begin(), out_edges.end(), (*e)), out_edges.end());
+          vertex* target = (*e)->target();
+          adj_edge_storage& in_edges = target->m_in_edges;
+          in_edges.erase(std::remove(in_edges.begin(), in_edges.end(), (*e)), in_edges.end());
+          m_edges.erase(e);
         
       }
       // end @todo
