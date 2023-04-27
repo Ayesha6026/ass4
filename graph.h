@@ -19,19 +19,19 @@
 template<typename VertexProperty, typename EdgeProperty>
 class graph {
 
-  // The vertex and edge classes are forward-declared to allow their use in the
-  // public section below. Their definitions follow in the private section
-  // afterward.
-  class vertex;
-  class edge;
-  
-  struct vertex_hash;
-  struct edge_hash;
-  struct vertex_eq;
-  struct edge_eq;
-  struct edge_comp;
+    // The vertex and edge classes are forward-declared to allow their use in the
+    // public section below. Their definitions follow in the private section
+    // afterward.
+    class vertex;
+    class edge;
 
-  public:
+    struct vertex_hash;
+    struct edge_hash;
+    struct vertex_eq;
+    struct edge_eq;
+    struct edge_comp;
+
+public:
 
     // Required public types
 
@@ -48,16 +48,16 @@ class graph {
     ///@brief A container for the edges. It should contain "edge*" or
     ///      shared_ptr<edge>.
     typedef std::unordered_set<edge*, edge_hash, edge_eq> MyEdgeContainer;
-	//typedef std::set<edge*, edge_comp> MyEdgeContainer;
+    //typedef std::set<edge*, edge_comp> MyEdgeContainer;
 
     ///@brief A container for the adjacency lists. It should contain
     ///      "edge*" or shared_ptr<edge>.
     typedef std::unordered_set<edge*, edge_hash, edge_eq> MyAdjEdgeContainer;
-	//typedef std::set<edge*, edge_comp> MyAdjEdgeContainer;
-	
-	///@brief A container for adjacency matrix. It should contain 
-	///       "edge*" or shared_ptr<edge>. 
-	typedef std::unordered_set<edge*, vertex_hash, vertex_eq> MyAdjMatrixContainer;
+    //typedef std::set<edge*, edge_comp> MyAdjEdgeContainer;
+
+    ///@brief A container for adjacency matrix. It should contain
+    ///       "edge*" or shared_ptr<edge>.
+    typedef std::unordered_set<edge*, vertex_hash, vertex_eq> MyAdjMatrixContainer;
 
     // Vertex iterators
     typedef typename MyVertexContainer::iterator vertex_iterator;
@@ -88,7 +88,7 @@ class graph {
     const_vertex_iterator vertices_cbegin() const {return m_vertices.cbegin();}
     vertex_iterator vertices_end() {return m_vertices.end();}
     const_vertex_iterator vertices_cend() const {return m_vertices.cend();}
-	  
+
     ///@brief  edge iterator operations
     edge_iterator edges_begin() {return m_edges.begin();}
     const_edge_iterator edges_cbegin() const {return m_edges.cbegin();}
@@ -100,53 +100,84 @@ class graph {
     size_t num_edges() const {return m_edges.size();}
 
     vertex_iterator find_vertex(vertex_descriptor vd) {
-      vertex v(vd, VertexProperty());
-      return m_vertices.find(&v);
+        vertex v(vd, VertexProperty());
+        return m_vertices.find(&v);
     }
 
     const_vertex_iterator find_vertex(vertex_descriptor vd) const {
-      vertex v(vd, VertexProperty());
-      return m_vertices.find(&v);
+        vertex v(vd, VertexProperty());
+        return m_vertices.find(&v);
     }
 
     edge_iterator find_edge(edge_descriptor ed) {
-      edge e(ed.first, ed.second, EdgeProperty());
-      return m_edges.find(&e);
+        edge e(ed.first, ed.second, EdgeProperty());
+        return m_edges.find(&e);
     }
 
     const_edge_iterator find_edge(edge_descriptor ed) const {
-      edge e(ed.first, ed.second, EdgeProperty());
-      return m_edges.find(&e);
+        edge e(ed.first, ed.second, EdgeProperty());
+        return m_edges.find(&e);
     }
 
     ///@todo Define modifiers
-    vertex_descriptor insert_vertex(const VertexProperty& vp){ 
-	  return m_max_vd;
-	}
+    vertex_descriptor insert_vertex(const VertexProperty& vp){
+        // Creating a vertex with m_max_vd as vd and the provided value as vp
+        vertex* next_vertex = new vertex(m_max_vd, vp);
+        // Incrementing m_max_vd for the next vertex
+        m_max_vd++;
+        // Insert into the vertex container
+        m_vertices.insert(next_vertex);
+        // Return the vertex descriptor
+        return next_vertex->descriptor();
+    }
     edge_descriptor insert_edge(vertex_descriptor sd, vertex_descriptor td,
-        const EdgeProperty& ep){
-		return std::make_pair(sd, td);	
-	}
+                                const EdgeProperty& ep){
+        // Creating an edge with the provided values
+        edge* next_edge = new edge(sd, td, ep);
+        // Inserting into the edge container
+        m_edges.insert(next_edge);
+        // Returning the edge descriptor
+        return next_edge->descriptor();
+    }
     void insert_edge_undirected(vertex_descriptor sd, vertex_descriptor td,
-        const EdgeProperty& ep){
-			
-	}
-    void erase_vertex(vertex_descriptor vd){
-		
-	}
-    void erase_edge(edge_descriptor ed){
-		
-	}
-	////end of @todo
-	
+                                const EdgeProperty& ep){
+        // This creates an undirected edge as there is now a
+        // connection to sd and td in both directions with the same ep
+        edge* forward_direction = new edge(sd, td, ep);
+        m_edges.insert(forward_direction);
+        edge* reverse_direction = new edge(td, sd, ep);
+        m_edges.insert(reverse_direction);
+    }
+    void erase_vertex(vertex_descriptor vd) {
+        // Finds the vertex in the container that matches the provided vd and deletes it
+        for (auto v = m_vertices.begin(); v != m_vertices.end(); v++) {
+            if ((*v)->descriptor() == vd) {
+                delete *v;
+                m_vertices.erase(v);
+                break;
+            }
+        }
+    }
+    void erase_edge(edge_descriptor ed) {
+        // Finds the edge in the container that matches the provided ed and deletes it
+        for (auto e = m_edges.begin(); e != m_edges.end(); e++) {
+            if ((*e)->descriptor() == ed) {
+                delete *e;
+                m_edges.erase(e);
+                break;
+            }
+        }
+    }
+    ////end of @todo
+
     void clear() {
-      m_max_vd = 0;
-      for(auto v : m_vertices)
-        delete v;
-      m_vertices.clear();
-      for(auto e : m_edges)
-        delete e;
-      m_edges.clear();
+        m_max_vd = 0;
+        for(auto v : m_vertices)
+            delete v;
+        m_vertices.clear();
+        for(auto e : m_edges)
+            delete e;
+        m_edges.clear();
     }
 
     // Friend declarations for input/output.
@@ -155,38 +186,38 @@ class graph {
     template<typename V, typename E>
     friend std::ostream& operator<<(std::ostream&, const graph<V, E>&);
 
-  private:
-	size_t m_max_vd; //< Maximum vertex descriptor assigned
+private:
+    size_t m_max_vd; //< Maximum vertex descriptor assigned
     MyVertexContainer m_vertices; //<Contains all vertices
     MyEdgeContainer m_edges;    //<Contains all edges
     // Required internal classes
 
     class vertex {
-        public:
-          ///required constructors/destructors
-          vertex(vertex_descriptor vd, const VertexProperty& v) :
-            m_descriptor(vd), m_property(v) { }
+    public:
+        ///required constructors/destructors
+        vertex(vertex_descriptor vd, const VertexProperty& v) :
+                m_descriptor(vd), m_property(v) { }
 
-          ///required vertex operations
+        ///required vertex operations
 
-          //iterators
-          adj_edge_iterator begin() {return m_out_edges.begin();}
-          const_adj_edge_iterator cbegin() const {return m_out_edges.cbegin();}
-          adj_edge_iterator end() {return m_out_edges.end();}
-          const_adj_edge_iterator cend() const {return m_out_edges.cend();}
+        //iterators
+        adj_edge_iterator begin() {return m_out_edges.begin();}
+        const_adj_edge_iterator cbegin() const {return m_out_edges.cbegin();}
+        adj_edge_iterator end() {return m_out_edges.end();}
+        const_adj_edge_iterator cend() const {return m_out_edges.cend();}
 
-          //accessors
-          const vertex_descriptor descriptor() const {return m_descriptor;}
-          VertexProperty& property() {return m_property;}
-          const VertexProperty& property() const {return m_property;}
+        //accessors
+        const vertex_descriptor descriptor() const {return m_descriptor;}
+        VertexProperty& property() {return m_property;}
+        const VertexProperty& property() const {return m_property;}
 
-        private:
+    private:
 
-          vertex_descriptor m_descriptor; // Unique id for the vertex - assigned during insertion
-          VertexProperty m_property;      // Label or property of the vertex - passed during insertion
-          MyAdjEdgeContainer m_out_edges; // Container that includes the out edges
+        vertex_descriptor m_descriptor; // Unique id for the vertex - assigned during insertion
+        VertexProperty m_property;      // Label or property of the vertex - passed during insertion
+        MyAdjEdgeContainer m_out_edges; // Container that includes the out edges
 
-          friend class graph;
+        friend class graph;
     };
 
 
@@ -194,10 +225,10 @@ class graph {
     /// Edges represent the connections between nodes in the graph.
     ////////////////////////////////////////////////////////////////////////////
     class edge {
-      public:
+    public:
         ///required constructors/destructors
         edge(vertex_descriptor s, vertex_descriptor t,
-              const EdgeProperty& w) : m_source(s), m_target(t), m_property(w) { }
+             const EdgeProperty& w) : m_source(s), m_target(t), m_property(w) { }
 
         ///required edge operations
 
@@ -208,45 +239,45 @@ class graph {
         EdgeProperty& property() {return m_property;}
         const EdgeProperty& property() const {return m_property;}
 
-      private:
+    private:
         vertex_descriptor m_source; // Unique id of the source vertex
-        vertex_descriptor m_target; // Unique id of the target vertex 
-        EdgeProperty m_property;    // Label or weight of the edge 
+        vertex_descriptor m_target; // Unique id of the target vertex
+        EdgeProperty m_property;    // Label or weight of the edge
     };
-	
-	struct vertex_hash {
+
+    struct vertex_hash {
         size_t operator()(vertex* const& v) const {
-          return h(v->descriptor());
+            return h(v->descriptor());
         }
         std::hash<vertex_descriptor> h;
     };
 
     struct edge_hash {
-	  // You can re-write this function to create the hash-value for a pair i.e., edge descriptor
-	  // instead of using boost::hash
-      size_t operator()(edge* const& e) const {
-        return h(e->descriptor());
-	  }
-      boost::hash<edge_descriptor> h;
+        // You can re-write this function to create the hash-value for a pair i.e., edge descriptor
+        // instead of using boost::hash
+        size_t operator()(edge* const& e) const {
+            return h(e->descriptor());
+        }
+        boost::hash<edge_descriptor> h;
     };
 
     struct vertex_eq {
-      bool operator()(vertex* const& u, vertex* const& v) const {
-        return u->descriptor() == v->descriptor();
-      }
+        bool operator()(vertex* const& u, vertex* const& v) const {
+            return u->descriptor() == v->descriptor();
+        }
     };
 
     struct edge_eq {
-      bool operator()(edge* const& e, edge* const& f) const {
-        return e->descriptor() == f->descriptor();
-      }
+        bool operator()(edge* const& e, edge* const& f) const {
+            return e->descriptor() == f->descriptor();
+        }
     };
-	
-	struct edge_comp {
-	  bool operator()(edge* const& e, edge* const& f) const {
-        return e->descriptor() < f->descriptor();
-      }
-	};
+
+    struct edge_comp {
+        bool operator()(edge* const& e, edge* const& f) const {
+            return e->descriptor() < f->descriptor();
+        }
+    };
 };
 
 ///@brief Define io operations for the graph.
@@ -257,15 +288,15 @@ std::istream& operator>>(std::istream& is, graph<V, E>& g) {
     g.m_vertices.reserve(num_verts);
     g.m_vertices.reserve(num_edges);
     for(size_t i = 0; i < num_verts; ++i) {
-      V v;
-      is >> v;
-      g.insert_vertex(v);
+        V v;
+        is >> v;
+        g.insert_vertex(v);
     }
     for(size_t i = 0; i < num_edges; ++i) {
-      typename graph<V, E>::vertex_descriptor s, t;
-      E e;
-      is >> s >> t >> e;
-      g.insert_edge(s, t, e);
+        typename graph<V, E>::vertex_descriptor s, t;
+        E e;
+        is >> s >> t >> e;
+        g.insert_edge(s, t, e);
     }
     return is;
 }
@@ -274,10 +305,10 @@ template<typename V, typename E>
 std::ostream& operator<<(std::ostream& os, const graph<V, E>& g) {
     os << g.num_vertices() << " " << g.num_edges() << std::endl;
     for(auto i = g.vertices_cbegin(); i != g.vertices_cend(); ++i)
-      os << (*i)->property() << std::endl;
+        os << (*i)->property() << std::endl;
     for(auto i = g.edges_cbegin(); i != g.edges_cend(); ++i)
-      os << (*i)->source() << " " << (*i)->target() << " "
-        << (*i)->property() << std::endl;
+        os << (*i)->source() << " " << (*i)->target() << " "
+           << (*i)->property() << std::endl;
     return os;
 }
 
