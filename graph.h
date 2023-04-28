@@ -123,62 +123,27 @@ public:
   }
 
   ///@todo Define modifiers
-  ///@todo Define modifiers
   vertex_descriptor insert_vertex(const VertexProperty &vp)
   {
-    vertex *v = new vertex(m_max_vd++, vp);
-    m_vertices.insert(v);
     return m_max_vd;
   }
-
   edge_descriptor insert_edge(vertex_descriptor sd, vertex_descriptor td,
                               const EdgeProperty &ep)
   {
-    auto source_vertex = find_vertex(sd);
-    edge *new_edge = new edge(sd, td, ep);
-    m_edges.insert(new_edge);
-    if (source_vertex != nullptr)
-
-    {
-      (*source_vertex)->m_out_edges.insert(new_edge);
-    }
-
     return std::make_pair(sd, td);
   }
-  void insert_edge_undirected(vertex_descriptor sd, vertex_descriptor td, const EdgeProperty &ep)
+  void insert_edge_undirected(vertex_descriptor sd, vertex_descriptor td,
+                              const EdgeProperty &ep)
   {
-    insert_edge(sd,td,ep);
-    insert_edge(td,sd,ep);
   }
   void erase_vertex(vertex_descriptor vd)
   {
-    auto vt = find_vertex(vd);
-    for(auto i:(*vt)->m_out_edges){
-      m_edges.erase(i);
-    }
-    if (vt != nullptr)
-    {
-      m_vertices.erase(vt);
-    }
-
+    // code
   }
   void erase_edge(edge_descriptor ed)
   {
-    auto et = find_edge(ed);
-    if (et != nullptr)
-    {
-      for (auto v = m_vertices.begin(); v != m_vertices.end(); ++v)
-      {
-        if (v != nullptr)
-        {
-          auto vt = find_vertex((*v)->descriptor());
-          if (vt != nullptr)
-
-            (*vt)->m_out_edges.erase(*et);
-        }
-      }
-      m_edges.erase(et);
-    }
+    // code
+    // code
   }
   ////end of @todo
 
@@ -223,12 +188,11 @@ private:
     const vertex_descriptor descriptor() const { return m_descriptor; }
     VertexProperty &property() { return m_property; }
     const VertexProperty &property() const { return m_property; }
-    MyAdjEdgeContainer m_out_edges;
 
   private:
     vertex_descriptor m_descriptor; // Unique id for the vertex - assigned during insertion
     VertexProperty m_property;      // Label or property of the vertex - passed during insertion
-                                    // Container that includes the out edges
+    MyAdjEdgeContainer m_out_edges; // Container that includes the out edges
 
     friend class graph;
   };
