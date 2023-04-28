@@ -96,32 +96,91 @@ template<typename VertexProperty, typename EdgeProperty>
       }
 
       //@todo modifiers
+
+      // Creates vertex object with a descriptor of m_max_vd and the passed in vertex property. This new object is added to
+      // the end of the m_vertices container. m_max_vd is incremented by one so that each vertex has a different descriptor. The function
+      // returns the descriptor of the new vertex object.
       vertex_descriptor insert_vertex(const VertexProperty& vp) {
-          m_vertices.push_back(new vertex(m_max_vd, vp));
-          m_max_vd += 1;
-        return m_max_vd;
+          vertex* newVertex = new vertex(m_max_vd, vp);
+          m_vertices.push_back(newVertex);
+          m_max_vd++;
+          return newVertex->descriptor();
       }
 
+      // Creates edge object with passed in descriptors of the source and target vertices, as well as the edge property. This new object
+      // is added to the end of the m_edges container. New vertex iterators are created for the source and target vertices of the current edge.
+      // If both source and target vertices are found in the m_vertices container, then the edge pointer of the new edge is added to the m_out_edges container of the 
+      // source vertex. We then return the descriptor of the new edge.
       edge_descriptor insert_edge(vertex_descriptor sd, vertex_descriptor td,
           const EdgeProperty& ep) {
-          m_edges.push_back(new edge(sd, td, ep));
-        return {sd,td};
+          edge* newEdge = new edge(sd, td, ep);
+          m_edges.push_back(newEdge);
+
+          vertex_iterator startVertexIterator = find_vertex(sd);
+          vertex_iterator endVertexIterator = find_vertex(td);
+
+          if (startVertexIterator != m_vertices.end() && endVertexIterator != m_vertices.end()) {
+              (*startVertexIterator)->m_out_edges.push_back(newEdge);
+          }
+
+          return newEdge->descriptor();
       }
 
+      // Two insert_edge functions are called so that a directed edge is created from the source vertex to the target vertex
+      // and also from the target vertex to the source vertex. Since it's two directed edges going to and from the same vertices in opposite directions, the result is an undirected edge.
       void insert_edge_undirected(vertex_descriptor sd, vertex_descriptor td,
           const EdgeProperty& ep) {
-          m_edges.push_back(new edge(sd, td, ep));
+          insert_edge(sd, td, ep);
+          insert_edge(td, sd, ep);
       }
 
+      // A vertex iterator object is created by finding the descriptor of the object we want to erase. If the vertex iterator is
+      // in the m_vertices container, we use a dereferenced iterator to retreive the pointer.
+      // We then create an edge iterator using the start of the m_out_edges container. While this created edge iterator, which contains the out edges of the vertex,
+      // is still in the set of the vertex's out edges, we erase the edges in the m_out_edges container by usng the descriptor of the current edge pointed to by the created edge iterator.
+      // This loop continues until m_out_edges is empty. After that, the vertex iterator is erased from the m_vertices container, and the derefereced iterator is deleted.
       void erase_vertex(vertex_descriptor vd) {
-          auto found = find_vertex(vd);
-          m_vertices.erase(found);
-          m_max_vd -= 1;
+          vertex_iterator vertexIterator = find_vertex(vd);
+
+          if (vertexIterator != m_vertices.end()) {
+              vertex* v = *vertexIterator;
+              auto edgeIterator = v->m_out_edges.begin();
+              while (edgeIterator != v->m_out_edges.end()) {
+                  erase_edge((*edgeIterator)->descriptor());
+                  edgeIterator = v->m_out_edges.begin();
+              }
+              m_vertices.erase(vertexIterator);
+              delete v;
+          }
       }
 
+      // An edge iterator is created by finding the descriptor of the edge we want to erase. If the edge iterator is
+      // in the m_edges container, then we retrieve the iterator pointing to the source vertex of the current edge. If this iterator is in the
+      // m_edges container, we iterate over the out edges of the source vertex, and for every out edge, if its descriptor matches the one
+      // passed into the function, we erase that out edge. If the descriptor doesn't match, then the iterator increments and the loop continues.
+      // After all that, the edge object is deleted and the edge iterator is erased from the m_edges container.
       void erase_edge(edge_descriptor ed) {
-          auto found = find_edge(ed);
-          m_edges.erase(found);
+          edge_iterator edgeIterator = find_edge(ed);
+
+          if (edgeIterator != m_edges.end()) {
+              edge* e = *edgeIterator;
+              vertex_iterator startVertexIterator = find_vertex(e->source());
+
+              if (startVertexIterator != m_vertices.end()) {
+                  adj_edge_storage& outEdges = (*startVertexIterator)->m_out_edges;
+                  auto outEdgesIterator = outEdges.begin();
+                  while (outEdgesIterator != outEdges.end()) {
+                      if ((*outEdgesIterator)->descriptor() == ed) {
+                          outEdgesIterator = outEdges.erase(outEdgesIterator);
+                          break;
+                      }
+                      outEdgesIterator++;
+                  }
+              }
+
+              delete e;
+              m_edges.erase(edgeIterator);
+          }
       }
       // end @todo
       void clear() {

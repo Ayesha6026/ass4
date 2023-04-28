@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <memory>
 #include <unordered_set>
-#include <set>
 
 #include <boost/functional/hash.hpp>
 
@@ -49,12 +48,12 @@ class graph {
     ///@brief A container for the edges. It should contain "edge*" or
     ///      shared_ptr<edge>.
     typedef std::unordered_set<edge*, edge_hash, edge_eq> MyEdgeContainer;
-//	typedef std::set<edge*, edge_comp> MyEdgeContainer;
+	//typedef std::set<edge*, edge_comp> MyEdgeContainer;
 
     ///@brief A container for the adjacency lists. It should contain
     ///      "edge*" or shared_ptr<edge>.
     typedef std::unordered_set<edge*, edge_hash, edge_eq> MyAdjEdgeContainer;
-//	typedef std::set<edge*, edge_comp> MyAdjEdgeContainer;
+	//typedef std::set<edge*, edge_comp> MyAdjEdgeContainer;
 	
 	///@brief A container for adjacency matrix. It should contain 
 	///       "edge*" or shared_ptr<edge>. 
@@ -121,28 +120,73 @@ class graph {
     }
 
     ///@todo Define modifiers
-    vertex_descriptor insert_vertex(const VertexProperty& vp) {
-        m_vertices.insert(new vertex(m_max_vd, vp));
-        m_max_vd += 1;
-	  return m_max_vd;
+
+    // Creates vertex object with a descriptor of m_max_vd and the passed in vertex property. This object
+    // is added to the m_vertices container, and then then m_max_vd++ is returned so that each vertex has a different descriptor.
+    vertex_descriptor insert_vertex(const VertexProperty& vp){
+        vertex* newVertex = new vertex(m_max_vd, vp);
+        m_vertices.insert(newVertex);
+        return m_max_vd++;
 	}
+
+    // Creates edge object using the passed in vertex descriptor for both source and target vertices, as well as the edge property.
+    // This object is added to the m_edges container, and then new vertex iterators are created for the source and target vertices of the current edge.
+    // We then check if the source iterator is not equal to the end of the m_vertices container, and also if the target vertex iterator is not equal to the
+    // end of the m_vertices container. If both of these hold, then we add the new edge to the m_out_edges container by accessing its member function with a pointer using the '->'. This '->' will show up a lot.
+    // Finally, we return the source and target vertices of the newly added edge.
     edge_descriptor insert_edge(vertex_descriptor sd, vertex_descriptor td,
         const EdgeProperty& ep){
-        m_edges.insert(new edge(sd, td, ep));
-		return std::make_pair(sd, td);	
+        edge* newEdge = new edge(sd, td, ep);
+        m_edges.insert(newEdge);
+        vertex_iterator startVertexIterator = find_vertex(sd);
+        vertex_iterator endVertexIterator = find_vertex(td);
+        if (startVertexIterator != m_vertices.end() && endVertexIterator != m_vertices.end()) {
+            (*startVertexIterator)->m_out_edges.insert(newEdge);
+        }
+        return std::make_pair(sd, td);
 	}
+
+    // Two insert_edge functions are called so that a directed edge is created from the source vertex to the target vertex
+    // and also from the target vertex to the source vertex. Since it's two directed edges going to and from the same vertices in opposite directions, the result is an undirected edge.
     void insert_edge_undirected(vertex_descriptor sd, vertex_descriptor td,
         const EdgeProperty& ep){
-			m_edges.insert(new edge(sd, td, ep));
+        insert_edge(sd, td, ep);
+        insert_edge(td, sd, ep);
 	}
+
+    // A vertex_iterator object is created by finding the descriptor of the vertex we want to erase. If the vertex is found,
+    // we look at the out edges of the vertex and begin iterating through all of them, removing all that we come across. The out going edges
+    // are erased from the m_edges container and then we delete the current edge object. After all outgoing edges are erased,
+    // we erase the vertex itself and it is removed from the m_vertices container.
     void erase_vertex(vertex_descriptor vd){
-		auto found = find_vertex(vd);
-        m_vertices.erase(found);
-        m_max_vd -= 1;
+        vertex_iterator vertexIterator = find_vertex(vd);
+        if (vertexIterator != m_vertices.end()) {
+            auto edgeIterator = (*vertexIterator)->m_out_edges.begin();
+            while (edgeIterator != (*vertexIterator)->m_out_edges.end()) {
+                m_edges.erase(*edgeIterator);
+                delete* edgeIterator;
+                edgeIterator = (*vertexIterator)->m_out_edges.erase(edgeIterator);
+            }
+            delete* vertexIterator;
+            m_vertices.erase(vertexIterator);
+        }
 	}
+
+    // An edge_iterator object is created by finding the descriptor of the edge we want to erase. If the edge is found in the
+    // m_edges container, we find the source and target vertices of the edge we want to delete and they are not equal,
+    // we erase the edge pointer from the m_out_edges container of the source vertex. We then delete the edge object and erase it
+    // from the m_edges container.
     void erase_edge(edge_descriptor ed){
-		auto found = find_edge(ed);
-        m_edges.erase(found);
+        edge_iterator edgeIterator = find_edge(ed);
+        if (edgeIterator != m_edges.end()) {
+            vertex_iterator startVertexIterator = find_vertex((*edgeIterator)->source());
+            vertex_iterator endVertexIterator = find_vertex((*edgeIterator)->target());
+            if (startVertexIterator != endVertexIterator) {
+                (*startVertexIterator)->m_out_edges.erase(*edgeIterator);
+            }
+            delete *edgeIterator;
+            m_edges.erase(edgeIterator);
+        }
 	}
 	////end of @todo
 	
@@ -175,6 +219,7 @@ class graph {
             m_descriptor(vd), m_property(v) { }
 
           ///required vertex operations
+          
 
           //iterators
           adj_edge_iterator begin() {return m_out_edges.begin();}
