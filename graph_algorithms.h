@@ -3,8 +3,7 @@
 
 #include <queue>
 #include <unordered_set>
-//#include <boost/functional/hash.hpp> // Comment this if you haven't boost installed
-
+#include <boost/functional/hash.hpp> // Comment this if you haven't boost installed
 
 // This is an example list of the basic algorithms we will work with in class.
 //
@@ -24,113 +23,117 @@
 // equal.
 //
 
-
 ///@brief Implement breadth-first search.
-template<typename Graph, typename ParentMap>
-  void breadth_first_search(const Graph& g, ParentMap& p) {
-    typedef typename Graph::vertex_descriptor vertex_descriptor;
-    typedef typename Graph::edge_descriptor edge_descriptor;
-    typedef typename Graph::const_vertex_iterator vertex_iterator;
-    typedef typename Graph::const_edge_iterator edge_iterator;
-    typedef typename Graph::const_adj_edge_iterator adj_edge_iterator;
+template <typename Graph, typename ParentMap>
+void breadth_first_search(const Graph &g, ParentMap &p)
+{
+  typedef typename Graph::vertex_descriptor vertex_descriptor;
+  typedef typename Graph::edge_descriptor edge_descriptor;
+  typedef typename Graph::const_vertex_iterator vertex_iterator;
+  typedef typename Graph::const_edge_iterator edge_iterator;
+  typedef typename Graph::const_adj_edge_iterator adj_edge_iterator;
 
-    //setup
-    std::queue<vertex_descriptor> q;
-    std::unordered_set<edge_descriptor, boost::hash<edge_descriptor>> edges_unexplored;
-    std::unordered_set<vertex_descriptor> vertices_unexplored;
+  // setup
+  std::queue<vertex_descriptor> q;
+  std::unordered_set<edge_descriptor, boost::hash<edge_descriptor>> edges_unexplored;
+  std::unordered_set<vertex_descriptor> vertices_unexplored;
 
-    //initialize
-    p.clear();
-    for(vertex_iterator vi = g.vertices_cbegin(); vi != g.vertices_cend(); ++vi) {
-      vertex_descriptor vd = (*vi)->descriptor();
-      vertices_unexplored.emplace(vd);
-      p[vd] = -1;
-    }
-    for(edge_iterator ei = g.edges_cbegin(); ei != g.edges_cend(); ++ei)
-      edges_unexplored.emplace((*ei)->descriptor());
+  // initialize
+  p.clear();
+  for (vertex_iterator vi = g.vertices_cbegin(); vi != g.vertices_cend(); ++vi)
+  {
+    vertex_descriptor vd = (*vi)->descriptor();
+    vertices_unexplored.emplace(vd);
+    p[vd] = -1;
+  }
+  for (edge_iterator ei = g.edges_cbegin(); ei != g.edges_cend(); ++ei)
+    edges_unexplored.emplace((*ei)->descriptor());
 
-    //for each CC
-    for(vertex_iterator vi = g.vertices_cbegin(); vi != g.vertices_cend(); ++vi) {
-      vertex_descriptor vd = (*vi)->descriptor();
-      if(vertices_unexplored.count(vd)) {
-        q.push(vd);
-        vertices_unexplored.erase(vd);
-        while(!q.empty()) {
-          vertex_descriptor vd = q.front();
-          q.pop();
-          auto& v = *g.find_vertex(vd);
-          for(adj_edge_iterator aei = v->begin(); aei != v->end(); ++aei) {
-            auto el = edges_unexplored.find((*aei)->descriptor());
-            if(el != edges_unexplored.end()) {
-              vertex_descriptor t = (*aei)->target();
-              if(vertices_unexplored.count(t)) {
-                //discovery edge
-                edges_unexplored.erase(el);
-                p[t] = v->descriptor();
-                q.push(t);
-                vertices_unexplored.erase(t);
-              }
-              //else cross edge
+  // for each CC
+  for (vertex_iterator vi = g.vertices_cbegin(); vi != g.vertices_cend(); ++vi)
+  {
+    vertex_descriptor vd = (*vi)->descriptor();
+    if (vertices_unexplored.count(vd))
+    {
+      q.push(vd);
+      vertices_unexplored.erase(vd);
+      while (!q.empty())
+      {
+        vertex_descriptor vd = q.front();
+        q.pop();
+        auto &v = *g.find_vertex(vd);
+        for (adj_edge_iterator aei = v->begin(); aei != v->end(); ++aei)
+        {
+          auto el = edges_unexplored.find((*aei)->descriptor());
+          if (el != edges_unexplored.end())
+          {
+            vertex_descriptor t = (*aei)->target();
+            if (vertices_unexplored.count(t))
+            {
+              // discovery edge
+              edges_unexplored.erase(el);
+              p[t] = v->descriptor();
+              q.push(t);
+              vertices_unexplored.erase(t);
             }
+            // else cross edge
           }
         }
       }
     }
   }
-
+}
 
 ///@todo Implement depth-first search.
-template<typename Graph, typename ParentMap>
-void depth_first_search(const Graph& g, ParentMap& p){
+template <typename Graph, typename ParentMap>
+void depth_first_search(const Graph &g, ParentMap &p)
+{
   typedef typename Graph::vertex_descriptor vertex_descriptor;
-    typedef typename Graph::edge_descriptor edge_descriptor;
-    typedef typename Graph::const_vertex_iterator vertex_iterator;
-    typedef typename Graph::const_edge_iterator edge_iterator;
-    typedef typename Graph::const_adj_edge_iterator adj_edge_iterator;
+  typedef typename Graph::edge_descriptor edge_descriptor;
+  typedef typename Graph::const_vertex_iterator vertex_iterator;
+  typedef typename Graph::const_edge_iterator edge_iterator;
+  typedef typename Graph::const_adj_edge_iterator adj_edge_iterator;
 
-    //setup
-    std::unordered_set<vertex_descriptor> vertices_unexplored;
-    std::unordered_set<edge_descriptor, std::hash<edge_descriptor>> edges_unexplored;
-    std::vector<vertex_descriptor> stack;
+  // setup
+  std::queue<vertex_descriptor> q;
+  std::unordered_set<edge_descriptor, boost::hash<edge_descriptor>> edges_unexplored;
+  std::unordered_set<vertex_descriptor> vertices_unexplored;
 
-    //initialize
-    p.clear();
-    for(vertex_iterator vi = g.vertices_cbegin(); vi != g.vertices_cend(); ++vi) {
-        vertex_descriptor vd = (*vi)->descriptor();
-        vertices_unexplored.emplace(vd);
-        p[vd] = -1;
-    }
-    for(edge_iterator ei = g.edges_cbegin(); ei != g.edges_cend(); ++ei)
-        edges_unexplored.emplace((*ei)->descriptor());
+  // initialize
+  p.clear();
+  for (vertex_iterator vi = g.vertices_cbegin(); vi != g.vertices_cend(); ++vi)
+  {
+    vertex_descriptor vd = (*vi)->descriptor();
+    vertices_unexplored.emplace(vd);
+    p[vd] = -1;
+  }
+  for (edge_iterator ei = g.edges_cbegin(); ei != g.edges_cend(); ++ei)
+    edges_unexplored.emplace((*ei)->descriptor());
 
-    //for each CC
-    for(vertex_iterator vi = g.vertices_cbegin(); vi != g.vertices_cend(); ++vi) {
-        vertex_descriptor vd = (*vi)->descriptor();
-        if(vertices_unexplored.count(vd)) {
-            stack.push_back(vd);
-            vertices_unexplored.erase(vd);
-            while(!stack.empty()) {
-                vertex_descriptor vd = stack.back();
-                stack.pop_back();
-                auto& v = *g.find_vertex(vd);
-                for(adj_edge_iterator aei = v->begin(); aei != v->end(); ++aei) {
-                    auto el = edges_unexplored.find((*aei)->descriptor());
-                    if(el != edges_unexplored.end()) {
-                        vertex_descriptor t = (*aei)->target();
-                        if(vertices_unexplored.count(t)) {
-                            //discovery edge
-                            edges_unexplored.erase(el);
-                            p[t] = v->descriptor();
-                            stack.push_back(t);
-                            vertices_unexplored.erase(t);
-                        }
-                        //else cross or back edge
-                    }
-                }
-            }
+  vertex_iterator vi = (g.vertices_cbegin()); //find first vertex
+  vertex_descriptor vd = (*vi)->descriptor(); //get its description
+  vertices_unexplored.erase(vd); //mark it as explored
+  q.push(vd);
+  while (!q.empty()) //as long as there is a unexplored vertex the queue won't be empty
+  {
+    auto &v = *g.find_vertex(q.front());
+    q.pop();
+    for (adj_edge_iterator aei = v->begin(); aei != v->end(); aei++) 
+    {
+      auto el = edges_unexplored.find((*aei)->descriptor());
+      if (el != edges_unexplored.end()) //check if adjacent edge is unexplored, if not skip (marked as back edge)
+      {
+        vertex_descriptor ver = (*aei)->target();
+        if (vertices_unexplored.count(ver)) //check if vertex is unexplored
+        {
+          edges_unexplored.erase(el);
+          q.push(ver); //push to queue to start next iteration at
+          vertices_unexplored.erase(ver);
+          p[ver] = v->descriptor();
         }
+      }
     }
-	
+  }
 }
 
 #endif
