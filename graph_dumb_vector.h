@@ -96,101 +96,47 @@ template<typename VertexProperty, typename EdgeProperty>
       }
 
       //@todo modifiers
-
-      /*
-        This function inserts a new vertex into the graph by taking in a constant reference to a VertexProperty object as its input parameter vp. It initializes a new vertex_descriptor named new_vertex_descriptor, setting it to the current maximum vertex descriptor m_max_vd. An important step is m_max_vd  is then incremented for future insertions. A new vertex object, new_v is then created using new_vertex_descriptor and vp as arguments. The new vertex is then added to the vertex container m_vertices. Where finally, the function returns the descriptor new_vertex_descriptor for the newly inserted vertex.
-      */
-
       vertex_descriptor insert_vertex(const VertexProperty& vp) {
-        // It initializes a new vertex_descriptor named new_vertex_descriptor, setting it to the current maximum vertex descriptor m_max_vd. An important step is m_max_vd  is then incremented for future insertions.
-        vertex_descriptor new_vertex_descriptor = m_max_vd++;
-        // A new vertex object, new_v is then created using new_vertex_descriptor and vp as arguments.
-        vertex* new_v = new vertex(new_vertex_descriptor, vp);
-        // The new vertex is then added to the vertex container m_vertices.
-        m_vertices.push_back(new_v);
-        // Where finally, the function returns the descriptor new_vertex_descriptor for the newly inserted vertex.
-        return new_vertex_descriptor;
+        vertex v = new vertex(m_max_vd, vp);
+        m_max_vd++;
+        m_vertices.insert(&v);
+        return m_max_vd - 1;
       }
 
-      /*
-        This function inserts a new edge into the graph by taking two vertex descriptors sd and td which represent the source and target vertices, and a constant reference to an EdgeProperty object ep. Firstly, this function begins by creating a new edge object, new_edge, using sd, td, and ep as arguments. The new edge is then added to the edge container m_edges. The function searches for the source vertex sd using the find_vertex method, where if found adds the new edge to the source vertex's adjacency list m_out_edges. Finally, the function returns a pair of vertex descriptors, (sd, td), as the edge descriptor for the newly inserted edge.
-      */
-
-      edge_descriptor insert_edge(vertex_descriptor sd, vertex_descriptor td, const EdgeProperty& ep) {
-        // Firstly, this function begins by creating a new edge object, new_edge, using sd, td, and ep as arguments.
-        edge* new_edge = new edge(sd, td, ep);
-        // The new edge is then added to the edge container m_edges.
-        m_edges.push_back(new_edge);
-        // The function searches for the source vertex sd using the find_vertex method
-        vertex_iterator source_iterator = find_vertex(sd);
-        // where if found adds the new edge to the source vertex's adjacency list m_out_edges.
-        if (source_iterator != m_vertices.end()) {
-          (*source_iterator)->m_out_edges.push_back(new_edge);
-        }
-        // Finally, the function returns a pair of vertex descriptors, (sd, td), as the edge descriptor for the newly inserted edge.
-        return std::make_pair(sd, td);
+      edge_descriptor insert_edge(vertex_descriptor sd, vertex_descriptor td,
+          const EdgeProperty& ep) {
+        vertex_iterator source = find_vertex(sd);
+        edge e = new edge({sd, td}, ep);
+        (*source)->m_out_edges.push_back(e);
+        m_edges.push_back(e);
+        return {sd,td};
       }
 
-      /*
-        This function inserts an undirected edge into the graph, taking three input parameters being two vertex_descriptor objects, sd and td, representing the source and target vertices of the edge, and a constant reference to an EdgeProperty object, ep. Now, to create an undirected edge, the function calls the insert_edge() function twice. The reasoning for this is in the first call it creates an edge from the source vertex sd to the target vertex td with the given edge property ep. Now with the second call it creates another edge in the opposite direction, from the target vertex td to the source vertex sd, also with the edge property ep. This result ensures that the graph represents an undirected edge between the two vertices.
-      */
-      void insert_edge_undirected(vertex_descriptor sd, vertex_descriptor td, const EdgeProperty& ep) {
-        // Now, to create an undirected edge, the function calls the insert_edge() function twice.
-        // The reasoning for this is in the first call it creates an edge from the source vertex sd to the target vertex td with the given edge property ep.
+      void insert_edge_undirected(vertex_descriptor sd, vertex_descriptor td,
+          const EdgeProperty& ep) {
         insert_edge(sd, td, ep);
-        // Now with the second call it creates another edge in the opposite direction, from the target vertex td to the source vertex sd, also with the edge property ep.
         insert_edge(td, sd, ep);
-        // This result ensures that the graph represents an undirected edge between the two vertices.
       }
-
-      /*
-        This function erases a vertex from the graph by taking a vertex descriptor vd as its only input. It starts by finding the vertex iterator vertex_it for the given vertex descriptor. If the vertex iterator is not at the end of the vertex container (!=), this means the vertex exists currently in the graph. The function then iterates through all the outgoing edges of the vertex v and calls the erase_edge function for each edge descriptor. After removing all edges connected to the vertex, it then deletes the vertex object v and erases the vertex iterator vertex_it from the vertex container m_vertices.
-      */
 
       void erase_vertex(vertex_descriptor vd) {
-        // It starts by finding the vertex iterator vertex_it for the given vertex descriptor.
-        vertex_iterator vertex_it = find_vertex(vd);
-        // If the vertex iterator is not at the end of the vertex container (!=), this means the vertex exists currently in the graph.
-        if (vertex_it != m_vertices.end()) {
-          // The function then iterates through all the outgoing edges of the vertex v
-          vertex* v = *vertex_it;
-          for (auto e : v -> m_out_edges) {
-            // calls the erase_edge function for each edge descriptor.
-            erase_edge(e -> descriptor());
-          }
-          // After removing all edges connected to the vertex, it then deletes the vertex object v
-          delete v;
-          // erases the vertex iterator vertex_it from the vertex container m_vertices.
-          m_vertices.erase(vertex_it);
+        vertex_iterator v = find_vertex(vd);
+        // Remove associated edges
+        for (auto e : (*v)->m_out_edges) {
+          erase_edge(e->descriptor());
         }
+        // Remove vertex
+        m_vertices.erase(v);
+        delete *v;
       }
 
-      /*
-        This function erases an edge from the graph by taking a single input parameter edge_descriptor ed, which highlights the edge to be removed. The function starts by finding the edge iterator e_iterator using the find_edge() function. If the edge is found in the graph then the function continues to remove the edge from the source vertex's adjacency list. The way this is down is by obtaining the vertex iterator v_iterator of the source vertex by calling the find_vertex() function with e->source(). If the source vertex is successfully found then the function accesses the vertex's m_out_edges container and removes the specified edge e. Lastly, the function eliminates the edge from the graph's edge container m_edges and deallocates the memory used by the edge object using delete e.
-      */
-
-
       void erase_edge(edge_descriptor ed) {
-        // The function starts by finding the edge iterator e_iterator using the find_edge() function.
-        edge_iterator e_iterator = find_edge(ed);
-        // If the edge is found in the graph then the function continues to remove the edge from the source vertex's adjacency list.
-        if (e_iterator != m_edges.end()) {
-          edge* e = *e_iterator;
-          // The way this is down is by obtaining the vertex iterator v_iterator of the source vertex by calling the find_vertex() function with e->source().
-          vertex_iterator v_iterator = find_vertex(e->source());
-          if (v_iterator != m_vertices.end()) {
-            vertex* v = *v_iterator;
-            //  If the source vertex is successfully found then the function accesses the vertex's m_out_edges container and removes the specified edge e.
-            auto edge_to_remove = std::find(v->m_out_edges.begin(), v->m_out_edges.end(), e);
-            if (edge_to_remove != v->m_out_edges.end()) {
-              v->m_out_edges.erase(edge_to_remove);
-            }
-          }
+        edge_iterator e = find_edge(ed);
 
-          // Lastly, the function eliminates the edge from the graph's edge container m_edges and deallocates the memory used by the edge object using delete e.
-          m_edges.erase(e_iterator);
-          delete e;
-        }
+        // Remove from sd
+        vertex_iterator source = find_vertex(ed.first);
+        (*source)->m_out_edges.erase(e);
+        m_edges.erase(e);
+        delete *e;
       }
       // end @todo
       void clear() {
