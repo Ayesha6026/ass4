@@ -6,7 +6,6 @@
 #include <utility>
 #include <algorithm>
 #include <memory>
-#include <vector>
 #include <unordered_set>
 
 #include <boost/functional/hash.hpp>
@@ -16,7 +15,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 /// A generic adjacency-list graph where each vertex stores a VertexProperty and
 /// each edge stores an EdgeProperty.
-/////////////////////////////////////////////////////////////////r ///////////////
+////////////////////////////////////////////////////////////////////////////////
 template<typename VertexProperty, typename EdgeProperty>
 class graph {
 
@@ -25,7 +24,7 @@ class graph {
   // afterward.
   class vertex;
   class edge;
-  
+
   struct vertex_hash;
   struct edge_hash;
   struct vertex_eq;
@@ -49,16 +48,16 @@ class graph {
     ///@brief A container for the edges. It should contain "edge*" or
     ///      shared_ptr<edge>.
     typedef std::unordered_set<edge*, edge_hash, edge_eq> MyEdgeContainer;
-	  //typedef std::set<edge*, edge_comp> MyEdgeContainer;
+	//typedef std::set<edge*, edge_comp> MyEdgeContainer;
 
     ///@brief A container for the adjacency lists. It should contain
     ///      "edge*" or shared_ptr<edge>.
     typedef std::unordered_set<edge*, edge_hash, edge_eq> MyAdjEdgeContainer;
-	  //typedef std::set<edge*, edge_comp> MyAdjEdgeContainer;
-	
-	  ///@brief A container for adjacency matrix. It should contain 
-	  ///       "edge*" or shared_ptr<edge>. 
-	  typedef std::unordered_set<edge*, vertex_hash, vertex_eq> MyAdjMatrixContainer;
+	//typedef std::set<edge*, edge_comp> MyAdjEdgeContainer;
+
+	///@brief A container for adjacency matrix. It should contain
+	///       "edge*" or shared_ptr<edge>.
+	typedef std::unordered_set<edge*, vertex_hash, vertex_eq> MyAdjMatrixContainer;
 
     // Vertex iterators
     typedef typename MyVertexContainer::iterator vertex_iterator;
@@ -89,7 +88,7 @@ class graph {
     const_vertex_iterator vertices_cbegin() const {return m_vertices.cbegin();}
     vertex_iterator vertices_end() {return m_vertices.end();}
     const_vertex_iterator vertices_cend() const {return m_vertices.cend();}
-	  
+
     ///@brief  edge iterator operations
     edge_iterator edges_begin() {return m_edges.begin();}
     const_edge_iterator edges_cbegin() const {return m_edges.cbegin();}
@@ -120,55 +119,49 @@ class graph {
       return m_edges.find(&e);
     }
 
-    vertex_descriptor insert_vertex(const VertexProperty& vp){ 
-      //Why isnt m_max_vd updating?
-      vertex* v = new vertex(m_max_vd++, vp);
-      m_vertices.insert(v);
-      return v->descriptor();
-    }
+    ///@todo Define modifiers
+    vertex_descriptor insert_vertex(const VertexProperty& vp)
+    {
+        vertex v(vp, VertexProperty());
+        m_vertices.insert(&v);
+        return m_max_vd;
+	  }
+
 
     edge_descriptor insert_edge(vertex_descriptor sd, vertex_descriptor td,
-          const EdgeProperty& ep){
-      
-      edge* e = new edge(sd, td, ep);
-      m_edges.insert(e);
-      
-      vertex* sv = (*find_vertex(sd));
-      sv->m_out_edges.insert(e);
-      
-      return e->descriptor();	
-    }
-    
-    void insert_edge_undirected(vertex_descriptor sd, vertex_descriptor td,
-          const EdgeProperty& ep){
+        const EdgeProperty& ep){
         
-        insert_edge(sd, td, ep);
-        insert_edge(td, sd, ep);
-    }
-    
-    //TODO: Should we remove attached edges?
+        edge e(sd, td, EdgeProperty());
+        m_edges.insert(&e); 
+          
+		return std::make_pair(sd, td);
+	}
+
+
+    void insert_edge_undirected(vertex_descriptor sd, vertex_descriptor td,
+        const EdgeProperty& ep){
+          
+          edge e(sd, td, EdgeProperty());
+          m_edges.insert(&e); 
+
+	}
+
+
     void erase_vertex(vertex_descriptor vd){
-      for (vertex_iterator vi = m_vertices.begin(); vi != m_vertices.end(); vi++) {
-        if ((*vi)->descriptor() == vd) {
-          m_vertices.erase(vi);
-          return;
-        } 
-      }
-    }
-    
-    //TODO: should we remove floating verticies?
+      vertex v(vd, VertexProperty());
+      m_vertices.erase(&v);
+	}
+
+
     void erase_edge(edge_descriptor ed){
-      for (edge_iterator ei = m_edges.begin(); ei != m_edges.end(); ei++) {
-        if ((*ei)->descriptor() == ed) {
-          m_edges.erase(ei);
-          return;
-        }
-      }
-    }
-	
+        edge e(ed.first, ed.second, EdgeProperty());
+        m_edges.erase(&e);
+	}
+	////end of @todo
+
     void clear() {
       m_max_vd = 0;
-      for(auto v : m_vertices)
+      for(auto v : m_vertices) 
         delete v;
       m_vertices.clear();
       for(auto e : m_edges)
@@ -182,8 +175,8 @@ class graph {
     template<typename V, typename E>
     friend std::ostream& operator<<(std::ostream&, const graph<V, E>&);
 
-  private: 
-	  size_t m_max_vd; //< Maximum vertex descriptor assigned
+  private:
+	size_t m_max_vd; //< Maximum vertex descriptor assigned
     MyVertexContainer m_vertices; //<Contains all vertices
     MyEdgeContainer m_edges;    //<Contains all edges
     // Required internal classes
@@ -237,10 +230,10 @@ class graph {
 
       private:
         vertex_descriptor m_source; // Unique id of the source vertex
-        vertex_descriptor m_target; // Unique id of the target vertex 
-        EdgeProperty m_property;    // Label or weight of the edge 
+        vertex_descriptor m_target; // Unique id of the target vertex
+        EdgeProperty m_property;    // Label or weight of the edge
     };
-	
+
 	struct vertex_hash {
         size_t operator()(vertex* const& v) const {
           return h(v->descriptor());
@@ -268,7 +261,7 @@ class graph {
         return e->descriptor() == f->descriptor();
       }
     };
-	
+
 	struct edge_comp {
 	  bool operator()(edge* const& e, edge* const& f) const {
         return e->descriptor() < f->descriptor();

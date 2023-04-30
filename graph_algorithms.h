@@ -4,7 +4,6 @@
 #include <queue>
 #include <unordered_set>
 #include <boost/functional/hash.hpp> // Comment this if you haven't boost installed
-#include <functional>
 
 
 // This is an example list of the basic algorithms we will work with in class.
@@ -66,7 +65,7 @@ template<typename Graph, typename ParentMap>
               vertex_descriptor t = (*aei)->target();
               if(vertices_unexplored.count(t)) {
                 //discovery edge
-                edges_unexplored.erase(el);
+                edges_unexplored.erase(el); 
                 p[t] = v->descriptor();
                 q.push(t);
                 vertices_unexplored.erase(t);
@@ -85,34 +84,48 @@ template<typename Graph, typename ParentMap>
 void depth_first_search(const Graph& g, ParentMap& p){
   typedef typename Graph::vertex_descriptor vertex_descriptor;
   typedef typename Graph::edge_descriptor edge_descriptor;
-  typedef typename Graph::const_vertex_iterator VI;
-  //typedef typename Graph::const_edge_iterator EI;
-  typedef typename Graph::const_adj_edge_iterator AEI;
+  typedef typename Graph::const_vertex_iterator vertex_iterator;
+  typedef typename Graph::const_edge_iterator edge_iterator;
+  typedef typename Graph::const_adj_edge_iterator adj_edge_iterator;
 
-  std::unordered_set<vertex_descriptor> visited_vertices;
-  std::unordered_set<edge_descriptor, boost::hash<edge_descriptor>> back_edges;
-  std::unordered_set<edge_descriptor, boost::hash<edge_descriptor>> discovery_edges;
+  std::queue<vertex_descriptor> q;
+  std::unordered_set<edge_descriptor, boost::hash<edge_descriptor>> edges_unexplored;
+  std::unordered_set<vertex_descriptor> vertices_unexplored;
 
-  std::function<void(VI)> search = [&](VI v) {
-    if (!visited_vertices.count((*v)->descriptor())) {
-      visited_vertices.insert((*v)->descriptor());
-      for (AEI adj_edg = (*v)->begin(); adj_edg != (*v)->end(); adj_edg++) {
-        
-        if (!(discovery_edges.count((*adj_edg)->descriptor()))) {
-          search(g.find_vertex((*adj_edg)->target()));
-          discovery_edges.insert(((*adj_edg)->descriptor()));
-        
-        } else if (!(back_edges.count((*adj_edg)->descriptor()))) {
-          back_edges.insert((*adj_edg)->descriptor());
-        }
-      
-      }
-    }
-  };
-
-  for (VI v = g.vertices_cbegin(); v != g.vertices_cend(); v++) {
-    search(v);
+  p.clear();
+  for(vertex_iterator vi = g.vertices_cbegin(); vi != g.vertices_cend(); ++vi) {
+    vertex_descriptor vd = (*vi)->descriptor();
+    vertices_unexplored.emplace(vd);
+    p[vd] = -1;
   }
+
+  for(edge_iterator ei = g.edges_cbegin(); ei != g.edges_cend(); ++ei)
+      edges_unexplored.emplace((*ei)->descriptor());
+
+  for(vertex_iterator vi = g.vertices_cbegin(); vi != g.vertices_cend(); ++vi)
+  {
+    vertex_descriptor vd = (*vi)->descriptor();
+    if(vertices_unexplored.count(vd)) {
+        q.push(vd);
+        vertices_unexplored.erase(vd);
+
+        auto& v = *g.find_vertex(vd);
+        for(adj_edge_iterator aei = v->begin(); aei != v->end(); ++aei) {
+            auto el = edges_unexplored.find((*aei)->descriptor());
+            if(el != edges_unexplored.end()) {
+              vertex_descriptor t = (*aei)->target();
+              if(vertices_unexplored.count(t)) {
+                //discovery edge
+                edges_unexplored.erase(el);
+                p[t] = v->descriptor();
+                q.push(t);
+                depth_first_search(g, p);
+              }
+            }
+        }
+    }
+  }
+ 
 }
 
 #endif

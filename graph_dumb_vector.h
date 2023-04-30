@@ -97,47 +97,39 @@ template<typename VertexProperty, typename EdgeProperty>
 
       //@todo modifiers
       vertex_descriptor insert_vertex(const VertexProperty& vp) {
-        vertex* v = new vertex(m_max_vd++, vp);
-        m_vertices.push_back(v);
-        return v->descriptor();
+        vertex v(vp, VertexProperty());
+        m_vertices.push_back(&v);
+        return m_max_vd;
       }
 
       edge_descriptor insert_edge(vertex_descriptor sd, vertex_descriptor td,
           const EdgeProperty& ep) {
-
-        edge* e = new edge(sd, td, ep);
-        m_edges.push_back(e);
-
-        vertex* sv = (*find_vertex(sd));
-        sv->m_out_edges.push_back(e);
-        return e->descriptor();	
+          edge e(sd, td, EdgeProperty());
+          m_edges.push_back(&e);
+          return {sd,td};
       }
 
       void insert_edge_undirected(vertex_descriptor sd, vertex_descriptor td,
           const EdgeProperty& ep) {
+          edge e(sd, td, EdgeProperty());
+          m_edges.push_back(&e);
 
-        insert_edge(sd, td, ep);
-        insert_edge(td, sd, ep);
       }
 
       void erase_vertex(vertex_descriptor vd) {
-        for (vertex_iterator vi = m_vertices.begin(); vi != m_vertices.end(); vi++) {
-          if ((*vi)->descriptor() == vd) {
-            m_vertices.erase(vi);
-            delete (*vi);
-            return;
-          } 
-        }
+        vertex v(vd, VertexProperty());
+        m_vertices.erase(std::find_if(m_vertices.begin(), m_vertices.end(),
+            [&](const vertex* const v) {
+            return v->descriptor() == vd;
+            }));
       }
 
       void erase_edge(edge_descriptor ed) {
-        for (edge_iterator ei = m_edges.begin(); ei != m_edges.end(); ei++) {
-          if ((*ei)->descriptor() == ed) {
-            m_edges.erase(ei);
-            delete (*ei)
-            return;
-          }
-        }
+        edge e(ed.first, ed.second, EdgeProperty());
+        m_edges.erase(std::find_if(m_edges.begin(), m_edges.end(),
+            [&](const edge* const e) {
+            return e->descriptor() == ed;
+            }));
       }
       // end @todo
       void clear() {
@@ -187,7 +179,7 @@ template<typename VertexProperty, typename EdgeProperty>
           vertex_descriptor m_descriptor; // Unique id assigned during insertion
           VertexProperty m_property;      // Label or weight passed during insertion
           adj_edge_storage m_out_edges;   // Outgoing edges
-  
+
           friend class graph_vector;
       };
 
