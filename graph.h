@@ -48,12 +48,12 @@ class graph {
     ///@brief A container for the edges. It should contain "edge*" or
     ///      shared_ptr<edge>.
     typedef std::unordered_set<edge*, edge_hash, edge_eq> MyEdgeContainer;
-	//typedef std::set<edge*, edge_comp> MyEdgeContainer;
+	typedef std::set<edge*, edge_comp> MyEdgeContainer;
 
     ///@brief A container for the adjacency lists. It should contain
     ///      "edge*" or shared_ptr<edge>.
-    typedef std::unordered_set<edge*, edge_hash, edge_eq> MyAdjEdgeContainer;
-	//typedef std::set<edge*, edge_comp> MyAdjEdgeContainer;
+  typedef std::unordered_set<edge*, edge_hash, edge_eq> MyAdjEdgeContainer;
+	typedef std::set<edge*, edge_comp> MyAdjEdgeContainer;
 	
 	///@brief A container for adjacency matrix. It should contain 
 	///       "edge*" or shared_ptr<edge>. 
@@ -110,59 +110,53 @@ class graph {
     }
 
     edge_iterator find_edge(edge_descriptor ed) {
-      edge e(ed.m_source, ed.m_target, EdgeProperty());
+      edge e(ed.first, ed.second, EdgeProperty());
       return m_edges.find(&e);
     }
 
     const_edge_iterator find_edge(edge_descriptor ed) const {
-      edge e(ed.m_source, ed.m_target, EdgeProperty());
+      edge e(ed.first, ed.second, EdgeProperty());
       return m_edges.find(&e);
     }
 
     ///@todo Define modifiers
     vertex_descriptor insert_vertex(const VertexProperty& vp){
-      vertex v = new vertex(m_max_vd, vp);
-      m_max_vd++;
-      m_vertices.insert(&v);
-	    return m_max_vd - 1;
+    //  // Create a new vertex with the given property
+    //   vertex_descriptor new_vd = ++m_max_vd;
+    //   m_vertices.insert(new_vd);
+    //   return new_vd;
+
+      // Generate a unique ID for the new vertex
+    vertex_descriptor new_vd = m_vertices.empty() ? 0 : *(m_vertices.rbegin()) + 1;
+    m_vertices.insert(new_vd);
+    return new_vd;
 	}
     edge_descriptor insert_edge(vertex_descriptor sd, vertex_descriptor td,
         const EdgeProperty& ep){
-      edge e = new edge(sd, td, ep);
-      m_edges.insert(&e);
-      vertex_descriptor source = find_vertex(sd);
-      (*source)->m_out_edges.insert(&e);
-		  return std::make_pair(sd, td);	
+        edge_descriptor new_ed = std::make_pair(sd, td);
+        m_edges.insert(new_ed);
+        return new_ed;	
 	}
     void insert_edge_undirected(vertex_descriptor sd, vertex_descriptor td,
         const EdgeProperty& ep){
+			// Insert two directed edges for an undirected edge
       insert_edge(sd, td, ep);
       insert_edge(td, sd, ep);
 	}
     void erase_vertex(vertex_descriptor vd){
-      if (find_vertex(vd) >= 0)
-        vertex v(vd, VertexProperty())
-        for (auto e : v->m_out_edges) {
-          edge_descriptor ed(e->m_source, e->m_target);
-          m_edges.erase(e);
-          vertex v2(e->m_target, VertexProperty());
-          v2->m_out_edges.erase(e);
-          delete e;
+		 // Erase all edges incident to the vertex
+    for (auto it = m_edges.begin(); it != m_edges.end(); ) {
+        if (it->first == vd || it->second == vd) {
+            it = m_edges.erase(it);
+        } else {
+            ++it;
         }
-      
+    }
+    m_vertices.erase(vd);
 	}
     void erase_edge(edge_descriptor ed){
-      vertex sv(ed.m_source, VertexProperty());
-      vertex tv(ed.m_target, VertexProperty());
-      if (sc %% tv) {
-        edge e(ed.m_source, ed.m_target, EdgeProperty());
-        if (m_edges.find(&e)) {
-          sv->m_out_edges.erase(e);
-          tv->m_out_edges.erase(e);
-          m_edges.erase(e);
-          delete e;
-        }
-      }
+		// Erase the edge
+      m_edges.erase(ed);
 	}
 	////end of @todo
 	
@@ -249,12 +243,10 @@ class graph {
     };
 
     struct edge_hash {
-	  // You can re-write this function to create the hash-value for a pair i.e., edge descriptor
-	  // instead of using boost::hash
-      size_t operator()(edge* const& e) const {
-        return h(e->descriptor());
-	  }
-      boost::hash<edge_descriptor> h;
+    size_t operator()(edge* const& e) const {
+    std::hash<vertex_descriptor> h;
+    return h(e->source()) ^ h(e->target());
+      }
     };
 
     struct vertex_eq {

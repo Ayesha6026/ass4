@@ -97,47 +97,96 @@ template<typename VertexProperty, typename EdgeProperty>
 
       //@todo modifiers
       vertex_descriptor insert_vertex(const VertexProperty& vp) {
-        vertex v = new vertex(m_max_vd, vp);
-        m_max_vd++;
-        m_vertices.insert(&v);
-        return m_max_vd - 1;
+         vertex * new_vertex = new vertex(m_max_vd, vp);
+
+          // Add the new vertex to the vertex storage
+          m_vertices.push_back(new_vertex);
+
+          // Increment the max vertex descriptor for future vertex additions
+          ++m_max_vd;
+
+          return m_max_vd -> descriptor();
       }
 
       edge_descriptor insert_edge(vertex_descriptor sd, vertex_descriptor td,
           const EdgeProperty& ep) {
-        vertex_iterator source = find_vertex(sd);
-        edge e = new edge({sd, td}, ep);
-        (*source)->m_out_edges.push_back(e);
-        m_edges.push_back(e);
-        return {sd,td};
+          edge * new_edge = new edge(sd, td, ep);
+
+          // Add the new edge to the edge storage
+          m_edges.push_back(new_edge);
+
+          // Get the source and target vertices from the vertex storage
+          vertex * source_vertex = m_vertices[sd];
+          vertex * target_vertex = m_vertices[td];
+
+          // Add the new edge to the source vertex's outgoing edge storage
+          source_vertex -> m_out_edges.push_back(new_edge);
+
+          // Return the descriptor of the new edge
+          return new_edge -> descriptor();
       }
 
       void insert_edge_undirected(vertex_descriptor sd, vertex_descriptor td,
           const EdgeProperty& ep) {
-        insert_edge(sd, td, ep);
-        insert_edge(td, sd, ep);
+          // Insert a directed edge from the source vertex to the target vertex
+          edge_descriptor forward_edge = insert_edge(sd, td, ep);
+
+          // Insert a directed edge from the target vertex to the source vertex
+          edge_descriptor backward_edge = insert_edge(td, sd, ep);
       }
 
       void erase_vertex(vertex_descriptor vd) {
-        vertex_iterator v = find_vertex(vd);
-        // Remove associated edges
-        for (auto e : (*v)->m_out_edges) {
-          erase_edge(e->descriptor());
+         // Find the iterator for the vertex to be removed
+        vertex_iterator vit = find_vertex(vd);
+
+      // If the vertex is found in the vertex storage
+      if (vit != m_vertices.end()) {
+        // Get the vertex pointer
+        vertex * v = * vit;
+
+        // Iterate through the vertex's outgoing edges and remove each of them
+        for (auto e: v -> m_out_edges) {
+          erase_edge(e -> descriptor());
         }
-        // Remove vertex
-        m_vertices.erase(v);
-        delete *v;
+
+        // Remove the vertex from the vertex storage
+        m_vertices.erase(vit);
+
+        // Delete the vertex object
+        delete v;
+        }
       }
 
       void erase_edge(edge_descriptor ed) {
-        edge_iterator e = find_edge(ed);
+        // Find the iterator for the edge to be removed
+        edge_iterator eit = find_edge(ed);
 
-        // Remove from sd
-        vertex_iterator source = find_vertex(ed.first);
-        (*source)->m_out_edges.erase(e);
-        m_edges.erase(e);
-        delete *e;
+        // If the edge is found in the edge storage
+        if (eit != m_edges.end()) {
+          // Get the edge pointer
+          edge * e = * eit;
+
+          // Get the source and target vertices from the vertex storage
+          vertex * source_vertex = m_vertices[e -> source()];
+          vertex * target_vertex = m_vertices[e -> target()];
+
+          // Find the edge in the source vertex's outgoing edge storage
+          adj_edge_iterator aei = std::find(source_vertex -> m_out_edges.begin(), source_vertex -> m_out_edges.end(), e);
+
+          // If the edge is found in the source vertex's outgoing edge storage
+          if (aei != source_vertex -> m_out_edges.end()) {
+            // Remove the edge from the source vertex's outgoing edge storage
+            source_vertex -> m_out_edges.erase(aei);
+          }
+
+          // Remove the edge from the edge storage
+          m_edges.erase(eit);
+
+          // Delete the edge object
+          delete e;
+        
       }
+    }
       // end @todo
       void clear() {
         m_max_vd = 0;
@@ -243,7 +292,5 @@ template<typename V, typename E>
         << (*i)->property() << std::endl;
     return os;
   }
-
-
 
 #endif
