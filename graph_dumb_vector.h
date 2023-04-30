@@ -107,41 +107,69 @@ public:
   //@todo modifiers
   vertex_descriptor insert_vertex(const VertexProperty &vp)
   {
-    m_vertices.push_back(new vertex(m_max_vd, vp));
+    
+    vertex *v = new vertex(m_max_vd, vp);
     m_max_vd++;
+    m_vertices.push_back(v); // push the vertex to the 
+
     return m_max_vd;
   }
 
   edge_descriptor insert_edge(vertex_descriptor sd, vertex_descriptor td,
                               const EdgeProperty &ep)
   {
-
-    auto E = new edge(sd, td, ep);
-    m_edges.push_back(E);
-    (*find_vertex(sd))->m_out_edges.push_back(E);
+    auto sd_V = find_vertex(sd);
+    edge *new_edge = new edge(sd, td, ep);
+    m_edges.push_back(new_edge);
+    if (sd_V != m_vertices.end())
+    {
+      (*sd_V)->m_out_edges.push_back(new_edge);
+    }
+    else
+    {
+      insert_vertex(sd);
+    }
+    if (find_vertex(td) == m_vertices.end())
+    {
+      insert_vertex(td);
+    }
     return {sd, td};
   }
 
   void insert_edge_undirected(vertex_descriptor sd, vertex_descriptor td,
                               const EdgeProperty &ep)
   {
-    auto E = new edge(sd,td,ep);
-    m_edges.push_back(E);
-    (*find_vertex(sd))->m_out_edges.push_back(E);
-    (*find_vertex(td))->m_out_edges.push_back(E);  
+    insert_edge(sd, td, ep);
+    insert_edge(td, sd, ep);
   }
 
   void erase_vertex(vertex_descriptor vd)
   {
-
-    m_vertices.erase(find_vertex(vd));
+    vertex_iterator vt = find_vertex(vd);
+    if (vt != m_vertices.end())
+    {
+      m_vertices.erase(vt);
+    }
   }
 
   void erase_edge(edge_descriptor ed)
+{
+  edge_iterator et = find_edge(ed);
+  if (et != m_edges.end())
   {
-
-    m_edges.erase(find_edge(ed));
+    for (auto& v : m_vertices)
+    {
+      vertex_iterator vt = find_vertex(v->descriptor());
+      if (vt != m_vertices.end())
+      {
+        auto& out_edges = (*vt)->m_out_edges;
+        out_edges.erase(std::remove(out_edges.begin(), out_edges.end(), *et), out_edges.end());
+      }
+    }
+    m_edges.erase(et);
   }
+}
+
   // end @todo
   void clear()
   {

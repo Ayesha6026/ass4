@@ -14,7 +14,6 @@
 /// A generic adjacency-list graph where each vertex stores a VertexProperty and
 /// each edge stores an EdgeProperty.
 ////////////////////////////////////////////////////////////////////////////////
-
 template <typename VertexProperty, typename EdgeProperty>
 class graph
 {
@@ -126,43 +125,65 @@ public:
   ///@todo Define modifiers
   vertex_descriptor insert_vertex(const VertexProperty &vp)
   {
-
-    m_vertices.insert(new vertex(m_max_vd, vp));
-    m_max_vd++;
-
-    return m_max_vd - 1;
+    // insertig the vertex in the graph
+    vertex *t = new vertex(m_max_vd, vp);
+    m_max_vd++; // incrementing the max_vd
+    m_vertices.insert(t);
+    return m_max_vd;
   }
+
   edge_descriptor insert_edge(vertex_descriptor sd, vertex_descriptor td,
                               const EdgeProperty &ep)
   {
-
-    auto E = new edge(sd, td, ep);
-    m_edges.insert(E);
-    (*find_vertex(sd))->m_out_edges.insert(E);
+    vertex_iterator sd_v = find_vertex(sd); // finding the source vertex
+    edge *edg = new edge(sd, td, ep); // creating the edge
+    m_edges.insert(edg);
+    if (sd_v != nullptr) // checking if the source vertex exists
+    {
+      (*sd_v)->m_out_edges.insert(edg);
+    }else{
+      insert_vertex(sd);
+    }
+    if(find_vertex(td) == nullptr){  // checking if the destination vertex exists
+      insert_vertex(td); // inserting the destination vertex
+    }
 
     return std::make_pair(sd, td);
   }
-  void insert_edge_undirected(vertex_descriptor sd, vertex_descriptor td,
-                              const EdgeProperty &ep)
+  void insert_edge_undirected(vertex_descriptor sd, vertex_descriptor td, const EdgeProperty &ep)
   {
-
-    auto E = new edge(sd, td, ep);
-    m_edges.insert(new edge(sd, td, ep));
-    (*find_vertex(sd))->m_out_edges.insert(E);
-    (*find_vertex(td))->m_out_edges.insert(E);
-
+    insert_edge(sd, td, ep); // inserting the edge in both directions
+    insert_edge(td, sd, ep);
   }
   void erase_vertex(vertex_descriptor vd)
   {
-
-    vertex Ev(vd, VertexProperty());
-    m_vertices.erase(&Ev);
+    vertex_iterator t = find_vertex(vd); 
+    for(auto i : (*t)->m_out_edges)
+    {
+       m_edges.erase(i);
+    }
+    if (t != nullptr) // checking if the vertex exists
+    {
+      m_vertices.erase(t);
+    }
   }
   void erase_edge(edge_descriptor ed)
   {
+    edge_iterator edg = find_edge(ed);  // find the edge
+    if (edg != nullptr)
+    {
+      for (auto i = m_vertices.begin(); i != m_vertices.end(); ++i) // iterating through the m_vertices container
+      {
+        if (i != nullptr)
+        {
+          vertex_iterator vtx = find_vertex((*i)->descriptor());   // find the vertex which exists in the m_vertices container
+          if (vtx != nullptr)
 
-    edge Ee(ed.first, ed.second, EdgeProperty());
-    m_edges.erase(&Ee);
+            (*vtx)->m_out_edges.erase(*edg); // erase the edge form the adjacency list of the vertex if it exists
+        }
+      }
+      m_edges.erase(edg);
+    }
   }
   ////end of @todo
 
@@ -207,11 +228,12 @@ private:
     const vertex_descriptor descriptor() const { return m_descriptor; }
     VertexProperty &property() { return m_property; }
     const VertexProperty &property() const { return m_property; }
+    
 
   private:
     vertex_descriptor m_descriptor; // Unique id for the vertex - assigned during insertion
     VertexProperty m_property;      // Label or property of the vertex - passed during insertion
-    MyAdjEdgeContainer m_out_edges; // Container that includes the out edges
+    MyAdjEdgeContainer m_out_edges;                         // Container that includes the out edges
 
     friend class graph;
   };
