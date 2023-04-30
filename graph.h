@@ -8,7 +8,7 @@
 #include <memory>
 #include <unordered_set>
 
-#include <boost/functional/hash.hpp>
+// #include <boost/functional/hash.hpp>
 
 ////////////////////////////////////////////////////////////////////////////////
 /// A generic adjacency-list graph where each vertex stores a VertexProperty and
@@ -125,64 +125,55 @@ public:
   ///@todo Define modifiers
   vertex_descriptor insert_vertex(const VertexProperty &vp)
   {
-    // insertig the vertex in the graph
-    vertex *t = new vertex(m_max_vd, vp);
-    m_max_vd++; // incrementing the max_vd
-    m_vertices.insert(t);
-    return m_max_vd;
+    vertex *v = new vertex(m_max_vd, vp);
+    m_vertices.insert(v);
+    return m_max_vd++;
   }
-
   edge_descriptor insert_edge(vertex_descriptor sd, vertex_descriptor td,
                               const EdgeProperty &ep)
   {
-    vertex_iterator sd_v = find_vertex(sd); // finding the source vertex
-    edge *edg = new edge(sd, td, ep); // creating the edge
-    m_edges.insert(edg);
-    if (sd_v != nullptr) // checking if the source vertex exists
-    {
-      (*sd_v)->m_out_edges.insert(edg);
-    }else{
-      insert_vertex(sd);
-    }
-    if(find_vertex(td) == nullptr){  // checking if the destination vertex exists
-      insert_vertex(td); // inserting the destination vertex
-    }
-
+    edge *e = new edge(sd, td, ep);
+    m_edges.insert(e);
     return std::make_pair(sd, td);
   }
-  void insert_edge_undirected(vertex_descriptor sd, vertex_descriptor td, const EdgeProperty &ep)
+  void insert_edge_undirected(vertex_descriptor sd, vertex_descriptor td,
+                              const EdgeProperty &ep)
   {
-    insert_edge(sd, td, ep); // inserting the edge in both directions
-    insert_edge(td, sd, ep);
+    edge *e1 = new edge(sd, td, ep);
+    m_edges.insert(e1);
+    edge *e2 = new edge(td, sd, ep);
+    m_edges.insert(e2);
   }
   void erase_vertex(vertex_descriptor vd)
   {
-    vertex_iterator t = find_vertex(vd); 
-    for(auto i : (*t)->m_out_edges)
+    auto v = find_vertex(vd);
+    if (v != m_vertices.end())
     {
-       m_edges.erase(i);
-    }
-    if (t != nullptr) // checking if the vertex exists
-    {
-      m_vertices.erase(t);
+      for (auto e = m_edges.begin(); e != m_edges.end();)
+      {
+        if ((*e)->m_source == vd || (*e)->m_target == vd)
+        {
+          auto temp = e;
+          ++e;
+          delete *temp;
+          m_edges.erase(temp);
+        }
+        else
+        {
+          ++e;
+        }
+      }
+      delete *v;
+      m_vertices.erase(v);
     }
   }
   void erase_edge(edge_descriptor ed)
   {
-    edge_iterator edg = find_edge(ed);  // find the edge
-    if (edg != nullptr)
+    auto e = find_edge(ed);
+    if (e != m_edges.end())
     {
-      for (auto i = m_vertices.begin(); i != m_vertices.end(); ++i) // iterating through the m_vertices container
-      {
-        if (i != nullptr)
-        {
-          vertex_iterator vtx = find_vertex((*i)->descriptor());   // find the vertex which exists in the m_vertices container
-          if (vtx != nullptr)
-
-            (*vtx)->m_out_edges.erase(*edg); // erase the edge form the adjacency list of the vertex if it exists
-        }
-      }
-      m_edges.erase(edg);
+      delete *e;
+      m_edges.erase(e);
     }
   }
   ////end of @todo
@@ -228,12 +219,11 @@ private:
     const vertex_descriptor descriptor() const { return m_descriptor; }
     VertexProperty &property() { return m_property; }
     const VertexProperty &property() const { return m_property; }
-    
 
   private:
     vertex_descriptor m_descriptor; // Unique id for the vertex - assigned during insertion
     VertexProperty m_property;      // Label or property of the vertex - passed during insertion
-    MyAdjEdgeContainer m_out_edges;                         // Container that includes the out edges
+    MyAdjEdgeContainer m_out_edges; // Container that includes the out edges
 
     friend class graph;
   };
@@ -274,13 +264,14 @@ private:
 
   struct edge_hash
   {
-    // You can re-write this function to create the hash-value for a pair i.e., edge descriptor
-    // instead of using boost::hash
-    size_t operator()(edge *const &e) const
+    size_t operator()(const edge_descriptor &e) const
     {
-      return h(e->descriptor());
+      std::size_t src_hash = std::hash<vertex_descriptor>()(e.source());
+      std::size_t dst_hash = std::hash<vertex_descriptor>()(e.target());
+      std::size_t weight_hash = std::hash<double>()(e.weight());
+      std::size_t hash_value = src_hash ^ (dst_hash << 1) ^ (weight_hash << 1);
+      return hash_value;
     }
-    boost::hash<edge_descriptor> h;
   };
 
   struct vertex_eq

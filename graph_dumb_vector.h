@@ -107,32 +107,25 @@ public:
   //@todo modifiers
   vertex_descriptor insert_vertex(const VertexProperty &vp)
   {
-    
-    vertex *v = new vertex(m_max_vd, vp);
-    m_max_vd++;
-    m_vertices.push_back(v); // push the vertex to the 
-
+    vertex *v = new vertex(++m_max_vd, vp);
+    m_vertices.push_back(v);
     return m_max_vd;
   }
 
   edge_descriptor insert_edge(vertex_descriptor sd, vertex_descriptor td,
                               const EdgeProperty &ep)
   {
-    auto sd_V = find_vertex(sd);
-    edge *new_edge = new edge(sd, td, ep);
-    m_edges.push_back(new_edge);
-    if (sd_V != m_vertices.end())
+    vertex_iterator source = find_vertex(sd);
+    vertex_iterator target = find_vertex(td);
+
+    if (source == vertices_end() || target == vertices_end())
     {
-      (*sd_V)->m_out_edges.push_back(new_edge);
+      throw std::runtime_error("insert_edge: vertex not found");
     }
-    else
-    {
-      insert_vertex(sd);
-    }
-    if (find_vertex(td) == m_vertices.end())
-    {
-      insert_vertex(td);
-    }
+
+    edge *e = new edge({sd, td}, ep);
+    (*source)->m_out_edges.push_back(e);
+    m_edges.push_back(e);
     return {sd, td};
   }
 
@@ -145,33 +138,64 @@ public:
 
   void erase_vertex(vertex_descriptor vd)
   {
-    vertex_iterator vt = find_vertex(vd);
-    if (vt != m_vertices.end())
+    vertex_iterator v = find_vertex(vd);
+    if (v == vertices_end())
     {
-      m_vertices.erase(vt);
+      throw std::runtime_error("erase_vertex: vertex not found");
     }
+
+    // erase all edges connected to the vertex
+    for (edge *e : (*v)->m_out_edges)
+    {
+      vertex *opposite_v = (e->m_source == (*v)) ? e->m_target : e->m_source;
+      opposite_v->m_out_edges.erase(
+          std::remove(opposite_v->m_out_edges.begin(),
+                      opposite_v->m_out_edges.end(), e),
+          opposite_v->m_out_edges.end());
+      m_edges.erase(std::remove(m_edges.begin(), m_edges.end(), e), m_edges.end());
+      delete e;
+    }
+
+    m_vertices.erase(v);
+    delete (*v);
   }
 
   void erase_edge(edge_descriptor ed)
-{
-  edge_iterator et = find_edge(ed);
-  if (et != m_edges.end())
   {
-    for (auto& v : m_vertices)
+    vertex_iterator source = find_vertex(ed.first);
+    vertex_iterator target = find_vertex(ed.second);
+
+    if (source == vertices_end() || target == vertices_end())
     {
-      vertex_iterator vt = find_vertex(v->descriptor());
-      if (vt != m_vertices.end())
+      throw std::runtime_error("erase_edge: vertex not found");
+    }
+
+    // find the edge and remove it from the out edges list of the source vertex
+    edge *e = nullptr;
+    for (edge *out_edge : (*source)->m_out_edges)
+    {
+      if (out_edge->m_target == (*target))
       {
-        auto& out_edges = (*vt)->m_out_edges;
-        out_edges.erase(std::remove(out_edges.begin(), out_edges.end(), *et), out_edges.end());
+        e = out_edge;
+        break;
       }
     }
-    m_edges.erase(et);
   }
-}
+
+  if (e == nullptr)
+  {
+    throw std::runtime_error("erase_edge: edge not found");
+  }
+
+  (*source)->m_out_edges.erase(
+      std::remove((*source)->m_out_edges.begin(), (*source)->m_out_edges.end(), e),
+      (*source)->m_out_edges.end());
+  m_edges.erase(std::remove(m_edges.begin(), m_edges.end(), e), m_edges.end());
+  delete e;
 
   // end @todo
-  void clear()
+  void
+  clear()
   {
     m_max_vd = 0;
     for (auto v : m_vertices)
