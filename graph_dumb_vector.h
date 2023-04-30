@@ -97,39 +97,63 @@ template<typename VertexProperty, typename EdgeProperty>
 
       //@todo modifiers
       vertex_descriptor insert_vertex(const VertexProperty& vp) {
-        vertex v(vp, VertexProperty());
-        m_vertices.push_back(&v);
-        return m_max_vd;
+          // create new vertex
+          auto v = new vertex(m_max_vd++, vp); 
+          // insert vertex into graph
+          m_vertices.push_back(v);
+
+          // return vertex descriptor
+          return v->descriptor();
       }
 
       edge_descriptor insert_edge(vertex_descriptor sd, vertex_descriptor td,
           const EdgeProperty& ep) {
-          edge e(sd, td, EdgeProperty());
-          m_edges.push_back(&e);
-          return {sd,td};
+          // create new edge
+          auto e = new edge(sd, td, ep);
+          // insert edge into graph
+          m_edges.push_back(e);
+
+          // update adjacency list for the source vertex
+          vertex* source = *find_vertex(sd);
+          source->m_out_edges.push_back(e);
+          
+          // return edge descriptor
+          return std::make_pair(sd, td);    
       }
 
       void insert_edge_undirected(vertex_descriptor sd, vertex_descriptor td,
           const EdgeProperty& ep) {
-          edge e(sd, td, EdgeProperty());
-          m_edges.push_back(&e);
-
-      }
-
+          insert_edge(sd, td, ep);
+          insert_edge(td, sd, ep);
+          }
+      //erase vertex from vector based graph
       void erase_vertex(vertex_descriptor vd) {
-        vertex v(vd, VertexProperty());
-        m_vertices.erase(std::find_if(m_vertices.begin(), m_vertices.end(),
-            [&](const vertex* const v) {
-            return v->descriptor() == vd;
-            }));
+         auto it = find_vertex(vd);
+          if (it != vertices_end()) {
+          // remove all edges connected to this vertex
+          auto adj_edges = (*it)->m_out_edges;
+          for (auto e : adj_edges) {
+          erase_edge(e->descriptor());
+        }
+        // delete vertex
+        delete *it;
+        m_vertices.erase(it);
+        }
       }
+    
 
       void erase_edge(edge_descriptor ed) {
-        edge e(ed.first, ed.second, EdgeProperty());
-        m_edges.erase(std::find_if(m_edges.begin(), m_edges.end(),
-            [&](const edge* const e) {
-            return e->descriptor() == ed;
-            }));
+          auto it = find_edge(ed);
+  if (it != edges_end()) {
+    // remove edge from source vertex's adjacency list
+    auto src = find_vertex(ed.first);
+    auto& adj_edges = (*src)->m_out_edges;
+    adj_edges.erase(std::remove_if(adj_edges.begin(), adj_edges.end(),
+      [&](const edge* e) { return e->descriptor() == ed; }), adj_edges.end());
+    // delete edge
+    delete *it;
+    m_edges.erase(it);
+  }
       }
       // end @todo
       void clear() {
@@ -179,7 +203,7 @@ template<typename VertexProperty, typename EdgeProperty>
           vertex_descriptor m_descriptor; // Unique id assigned during insertion
           VertexProperty m_property;      // Label or weight passed during insertion
           adj_edge_storage m_out_edges;   // Outgoing edges
-
+  
           friend class graph_vector;
       };
 
