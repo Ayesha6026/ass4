@@ -120,30 +120,33 @@ class graph {
     }
 
     ///@todo Define modifiers
-    vertex_descriptor insert_vertex(const VertexProperty& vp){
-      vertex* v = new vertex(m_max_vd, vp);
-      m_vertices.insert(v);
+    vertex_descriptor insert_vertex(const VertexProperty& vp){ 
+      m_vertices.insert(new vertex(m_max_vd, vp));
+
       m_max_vd++;
-	    return m_max_vd;
+	    return m_max_vd-1;
 	}
     edge_descriptor insert_edge(vertex_descriptor sd, vertex_descriptor td,
         const EdgeProperty& ep){
-      edge* e = new edge(sd, td, ep);
-      m_edges.insert(e);
-      return std::make_pair(sd, td);
+          auto p = new edge(sd, td, ep);
+          m_edges.insert(p);
+          (*find_vertex(sd))->m_out_edges.insert(p);
+
+		      return std::make_pair(sd, td);	
 	}
     void insert_edge_undirected(vertex_descriptor sd, vertex_descriptor td,
         const EdgeProperty& ep){
-      edge *e = new edge(sd, td, ep);
-      m_edges.insert(e);
+			    auto p = new edge(sd, td, ep);
+          m_edges.insert(p);
+          (*find_vertex(sd))->m_out_edges.insert(p);
+          (*find_vertex(td))->m_out_edges.insert(p);
+
 	}
     void erase_vertex(vertex_descriptor vd){
-      vertex v(vd, VertexProperty());
-      m_vertices.erase(&v);
+      m_vertices.erase(find_vertex(vd));
 	}
     void erase_edge(edge_descriptor ed){
-      edge e(ed.first, ed.second, EdgeProperty());
-      m_edges.erase(&e);
+      m_edges.erase(find_edge(ed));
 	}
 	////end of @todo
 	

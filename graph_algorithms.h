@@ -82,53 +82,50 @@ template<typename Graph, typename ParentMap>
 ///@todo Implement depth-first search.
 template<typename Graph, typename ParentMap>
 void depth_first_search(const Graph& g, ParentMap& p){
-  typedef typename Graph::edge_descriptor ED;
-  typedef typename Graph::const_vertex_iterator CVI;
-	typedef typename Graph::vertex_descriptor VD;
-  typedef typename Graph::const_edge_iterator CEI;
-  typedef typename Graph::const_adj_edge_iterator AEI;
-  
-  // Setup
-  std::queue<VD> q;
-  std::unordered_set<ED, boost::hash<ED>> unexploredEdges;
-  std::unordered_set<VD> unexploredVertices;
-  
-  // Initialize
-  p.clear();
-  for (CVI i = g.vertices_cbegin(); i != g.vertices_cend(); i++) {
-    VD vd = (*i)->descriptor();
-    unexploredVertices.emplace(vd);
-    p[vd] = -1;
-  }
-  for (CEI i = g.edges_cbegin(); i != g.edges_cend(); i++) {
-    unexploredEdges.emplace((*i)->descriptor());
-  }
-  
-  // For each CC
-  for (CVI i = g.vertices_cbegin(); i != g.vertices_cend(); i++) {
-    VD vd = (*i)->descriptor();
-    if (unexploredVertices.count(vd) > 0) {
-      q.push(vd);
-      unexploredVertices.erase(vd);
-      while (!q.empty()) {
-        VD vdFront = q.front();
-        q.pop();
-        auto &v = *g.find_vertex(vd);
-        for (AEI i = v->begin(); i != v->end(); i++) {
-          auto e = unexploredEdges.find((*i)->descriptor());
-          if (e != unexploredEdges.end()) {
-            VD vdTarget = (*i)->target();
-            if (unexploredVertices.count(vdTarget) > 0) {
-              unexploredEdges.erase(e);
-              p[vdTarget] = v->descriptor();
-              q.push(vdTarget);
-              unexploredVertices.erase(vdTarget);
-            }
-          }
-        }
-      }
+    typedef typename Graph::vertex_descriptor vertex_descriptor;
+    typedef typename Graph::edge_descriptor edge_descriptor;
+    typedef typename Graph::const_vertex_iterator vertex_iterator;
+    typedef typename Graph::const_edge_iterator edge_iterator;
+    typedef typename Graph::const_adj_edge_iterator adj_edge_iterator;
+
+    //setup
+    std::queue<vertex_descriptor> q;
+    std::unordered_set<edge_descriptor, boost::hash<edge_descriptor>> edges_unexplored;
+    std::unordered_set<vertex_descriptor> vertices_unexplored;
+
+    //initialize
+    p.clear();
+    for(vertex_iterator vi = g.vertices_cbegin(); vi != g.vertices_cend(); ++vi) {
+      vertex_descriptor vd = (*vi)->descriptor();
+      vertices_unexplored.emplace(vd);
+      p[vd] = -1;
     }
+    for(edge_iterator ei = g.edges_cbegin(); ei != g.edges_cend(); ++ei)
+      edges_unexplored.emplace((*ei)->descriptor());
+
+    //DFS
+      vertex_iterator vi = (g.vertices_cbegin());
+      vertex_descriptor vd = (*vi)->descriptor();
+      auto &v = *g.find_vertex(vd);
+      vertices_unexplored.erase(vd);
+
+      q.push(vd);
+
+      while(!q.empty()){
+      q.pop();
+      for(adj_edge_iterator aei = v->begin(); aei != v->end(); aei++){
+        auto el = edges_unexplored.find((*aei)->descriptor());
+        if(el != edges_unexplored.end()){
+          vertex_descriptor v = (*aei)->target();
+            if(vertices_unexplored.count(v)){
+              edges_unexplored.erase(el);
+              q.push(v);
+              vertices_unexplored.erase(v);
+        }
+        
   }
+}
+}
 }
 
 #endif
