@@ -107,32 +107,16 @@ public:
   //@todo modifiers
   vertex_descriptor insert_vertex(const VertexProperty &vp)
   {
-    
-    vertex *_vertex = new vertex(m_max_vd, vp);
-    m_max_vd++;
-    m_vertices.push_back(_vertex);
-
+    vertex *new_vertex = new vertex(m_max_vd++, vp);
+    m_vertices.push_back(new_vertex);
     return m_max_vd;
   }
 
   edge_descriptor insert_edge(vertex_descriptor sd, vertex_descriptor td,
                               const EdgeProperty &ep)
   {
-    auto _sDescriptor = find_vertex(sd);
-    edge *_edge = new edge(sd, td, ep);
-    m_edges.push_back(_edge);
-    if (_sDescriptor != m_vertices.end())
-    {
-      (*_sDescriptor)->m_out_edges.push_back(_edge);
-    }
-    else
-    {
-      insert_vertex(sd);
-    }
-    if (find_vertex(td) == m_vertices.end())
-    {
-      insert_vertex(td);
-    }
+    edge *new_edge = new edge(sd, td, ep);
+    m_edges.push_back(new_edge);
     return {sd, td};
   }
 
@@ -145,31 +129,29 @@ public:
 
   void erase_vertex(vertex_descriptor vd)
   {
-    auto vt = find_vertex(vd);
-    if (vt != m_vertices.end())
+    auto it = find_vertex(vd);
+    if (it != vertices_end())
     {
-      m_vertices.erase(vt);
+      vertex *erase_vertex = *it;
+      for (auto e : erase_vertex->m_out_edges)
+      {
+        erase_edge(e->descriptor());
+      }
+      m_vertices.erase(it);
+      delete erase_vertex;
     }
   }
 
   void erase_edge(edge_descriptor ed)
-{
-  auto _edge = find_edge(ed);
-  if (_edge != m_edges.end())
   {
-    for (auto& v : m_vertices)
+    auto it = find_edge(ed);
+    if (it != edges_end())
     {
-      auto _vertex = find_vertex(v->descriptor());
-      if (_vertex != m_vertices.end())
-      {
-        auto& out_edges = (*_vertex)->m_out_edges;
-        out_edges.erase(std::remove(out_edges.begin(), out_edges.end(), *_edge), out_edges.end());
-      }
+      edge *del_edge = *it;
+      m_edges.erase(it);
+      delete del_edge;
     }
-    m_edges.erase(_edge);
   }
-}
-
   // end @todo
   void clear()
   {

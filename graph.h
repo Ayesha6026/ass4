@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <memory>
 #include <unordered_set>
-
 #include <boost/functional/hash.hpp>
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -125,64 +124,32 @@ public:
   ///@todo Define modifiers
   vertex_descriptor insert_vertex(const VertexProperty &vp)
   {
-    
-    auto *_vertex = new vertex(m_max_vd, vp);
-    m_max_vd++; 
-    m_vertices.insert(_vertex);
+    vertex *vert = new vertex(m_max_vd++, vp);
+    m_vertices.insert(vert);
     return m_max_vd;
   }
-
   edge_descriptor insert_edge(vertex_descriptor sd, vertex_descriptor td,
                               const EdgeProperty &ep)
   {
-    vertex_iterator _sDescriptor = find_vertex(sd); 
-    edge *_edge = new edge(sd, td, ep); 
-    m_edges.insert(_edge);
-    if (_sDescriptor != nullptr) 
-    {
-      (*_sDescriptor)->m_out_edges.insert(_edge);
-    }else{
-      insert_vertex(sd);
-    }
-    if(find_vertex(td) == nullptr){  
-      insert_vertex(td); 
-    }
-
+    edge *ed = new edge(sd, td, ep);
+    m_edges.insert(ed);
     return std::make_pair(sd, td);
   }
-  void insert_edge_undirected(vertex_descriptor sd, vertex_descriptor td, const EdgeProperty &ep)
+  void insert_edge_undirected(vertex_descriptor sd, vertex_descriptor td,
+                              const EdgeProperty &ep)
   {
-    insert_edge(sd, td, ep); 
-    insert_edge(td, sd, ep);
+    edge *ed = new edge(sd, td, ep);
+    m_edges.insert(ed);
   }
   void erase_vertex(vertex_descriptor vd)
   {
-    auto _vertex = find_vertex(vd); 
-    for(auto i : (*_vertex)->m_out_edges){
-      m_edges.erase(i);
-    }
-    if (_vertex != nullptr) 
-    {
-      m_vertices.erase(_vertex);
-    }
+    vertex v(vd, VertexProperty());
+    m_vertices.erase(&v);
   }
   void erase_edge(edge_descriptor ed)
   {
-    auto _edge = find_edge(ed); 
-    if (_edge != nullptr)
-    {
-      for (auto i = m_vertices.begin(); i != m_vertices.end(); ++i) 
-      {
-        if (i != nullptr)
-        {
-          auto _vertex = find_vertex((*i)->descriptor());   
-          if (_vertex != nullptr)
-
-            (*_vertex)->m_out_edges.erase(*_edge); 
-        }
-      }
-      m_edges.erase(_edge);
-    }
+    edge e(ed.first, ed.second, EdgeProperty());
+    m_edges.erase(&e);
   }
   ////end of @todo
 
@@ -227,12 +194,11 @@ private:
     const vertex_descriptor descriptor() const { return m_descriptor; }
     VertexProperty &property() { return m_property; }
     const VertexProperty &property() const { return m_property; }
-    
 
   private:
     vertex_descriptor m_descriptor; // Unique id for the vertex - assigned during insertion
     VertexProperty m_property;      // Label or property of the vertex - passed during insertion
-    MyAdjEdgeContainer m_out_edges;                         // Container that includes the out edges
+    MyAdjEdgeContainer m_out_edges; // Container that includes the out edges
 
     friend class graph;
   };
